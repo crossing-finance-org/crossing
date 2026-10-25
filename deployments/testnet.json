@@ -51,7 +51,7 @@
     ]
   },
   "notes": "Redeployed 24 October 2026 after the C-19 fix (non-reveal penalty timing bypass): the auction WASM changed, so the factory/registry (which pin its hash at construction) and the oracle adapter (which pins the registry) all needed a fresh, mutually-verified deployment rather than an upgrade. The OracleAdapter's `base` constructor argument is the quote/settlement asset (here CUSD), matching SEP-40 semantics where `lastprice(OracleAsset::Stellar(rwa))` reports the rwa's price denominated in that fixed base; an initial deploy with base=CRWA was a mistake, left unused and superseded by CDFIP6XT4RBKQHHOZQ6T3OUMM7AWYNST6IEKPVTLB3RMIV2EOU6RRY6M (recorded above). The original asset setup funded each user with 50 whole CRWA and 50 whole CUSD (500,000,000 raw units of each); later auctions change those balances, so current holdings must be queried on-chain. CRWA requires per-holder SAC set_authorized (already granted to all 10 users) and will be needed again for each new Auction escrow instance before funding.",
-  "contract_source_commit": "0eb34001f074ed5d5a5348bfa4c51430452eeeb8",
+  "contract_source_commit": "5e949b843d7b2004280d7991b9a23730bfd458e9",
   "network_identity": {
     "passphrase": "Test SDF Network ; September 2015",
     "network_id_sha256": "cee0302d59844d32bdca915c8203dd44b33fbb7edc19051ea37abedf28ecd472"
@@ -96,5 +96,7 @@
     "PriceRegistry": "e06cbd88207e5ce202b96863e603d54c65df52f203dad66a3edb5e92b5b399e1",
     "AuctionFactory": "278613b366343198f795358f5fe85ba3bf2603816393c9cccad579a987edddc4",
     "OracleAdapter": "14456f2ac5b4b625f4cad53edae0f98fb928f00e9d13d9bdbce3f3483a981a5d"
-  }
+  },
+  "original_audit_source_commit": "0eb34001f074ed5d5a5348bfa4c51430452eeeb8",
+  "source_provenance_note": "The published source revision has the same contract build-input hashes as the original local audit revision. Publication starts a clean history excluding funding proposals and Word documents; the original audit revision is retained locally."
 }
