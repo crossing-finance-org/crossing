@@ -1,227 +1,215 @@
 # Crossing Protocol
 
-**Funded, single-price auctions for real-world assets on Stellar.**
+**Single-price auctions for private-market RWAs on Stellar.**
 
-Crossing lets an RWA issuer sell escrowed inventory or buy back tokens against an
-escrowed settlement-asset budget. Authorized participants submit funded open or
-sealed bids. The contracts rank eligible demand/supply, determine one clearing
-price, and resolve each allocation independently. A public registry records the
-clearing result and separate actual execution totals.
+Crossing Protocol is a set of Soroban smart contracts for selling and buying back
+tokenized real-world assets. An issuer brings an auction to market, participants
+submit funded bids, and the contracts bring those bids together at one clearing
+price. The mechanism supports assets such as private credit, real estate
+interests, and structured notes that may trade only occasionally.
 
-**Current status:** working smart-contract PoC, internally reviewed, deployed
-to and exercised on Stellar Testnet with 100+ real on-chain transactions
-across both modes and both bid modes (see
-[deployments/](deployments/)). There is no Mainnet deployment and no
-independent external contract audit. Documentation matches contract baseline
-`0.1.0` and architecture v1.6. The [documentation index](docs/README.md)
-tracks review dates and document ownership. The PoC implements the contracts and
-their local and Testnet demonstration. The technical architecture covers the full product, including
-the future client SDK, dApp, indexer, keepers, and curated price integration.
+Both sides commit assets before trading: the issuer escrows the inventory or
+buyback budget, and each participant funds its bid when placing it. Completed
+trades exchange those escrowed assets at the common clearing price. Auction
+results and actual execution totals can then be published on-chain.
 
-[Run the demo](docs/POC_DEMO.md) · [Architecture](ARCHITECTURE.md) ·
+[Run the PoC](docs/POC_DEMO.md) · [Architecture](ARCHITECTURE.md) ·
 [Contract API](docs/reference/CONTRACT_API.md) ·
-[Security review](docs/security/CONTRACT_REVIEW.md) ·
-[Findings and fixes](docs/security/FINDINGS_AND_FIXES.md) ·
-[Documentation index](docs/README.md)
+[Testnet evidence](deployments/TESTNET_TRANSACTIONS.md) ·
+[Documentation](docs/README.md)
 
-## Why batch auctions
+## Why an auction for private-market assets?
 
-Private credit, property interests, and structured assets often trade only
-occasionally. A fixed auction window collects funded interest without requiring
-buyers and sellers to be online together. A uniform clearing result gives
-participants a common execution price and leaves a public historical observation.
+An asset can have willing buyers and sellers without enough activity to sustain
+continuous trading. A private-credit position, a property interest, or a
+structured note may change hands around a financing event, a liquidity window,
+or an issuer buyback.
 
-The registry provides verifiable auction outcomes. It does not continuously
-revalue an asset or certify fair value. Collateral integrations need their own
-source, execution-volume, freshness, and manipulation policy.
+Crossing collects that interest over a defined bidding window. Participants do
+not need to arrive simultaneously or negotiate a separate execution price for
+every trade. Their bids form one auction book, and eligible allocations share
+one clearing price. This gives the issuer a structured way to distribute or
+repurchase tokens and participants a common basis for execution.
 
-## Features and scope
+The resulting observation also makes an otherwise infrequent trade visible to
+other applications. It records what that auction cleared at, together with how
+much actually traded.
 
-| Component or feature | Current status |
-|---|---|
-| Issuer-authorized factory and immutable auction instances | Implemented |
-| Sales with escrowed RWA inventory | Implemented |
-| Buybacks with escrowed quote budget | Implemented |
-| Funded open bids and public price-tick aggregates | Implemented |
-| Funded sealed commitments, reveal verification, non-reveal refunds | Implemented |
-| Uniform-price clearing and pro-rata marginal allocation | Implemented |
-| SAC compliance at admission, atomic finalization of every price contributor, and delivery | Implemented |
-| Independent delivery, same-owner credits, withdrawals, and deadline expiry | Implemented |
-| Verified public clearing and actual-execution registry | Implemented |
-| Optional bounded non-reveal penalty on Sealed auctions | Implemented; default zero, issuer-configured up to 50% |
-| Read-only, partial SEP-40 price adapter (`base`/`decimals`/`resolution`/`lastprice`) | Implemented |
-| Local compiled-WASM demonstration and regression suite | Implemented |
-| Client SDK, dApp, indexer/API, hosted keeper services | Architecture specified; not implemented |
-| Separately reviewed curated oracle feed (source/manipulation governance) and lending/vault integrations | Architecture boundary specified; separate implementation/review required |
+## Sales and buybacks
 
-The Rust Soroban SDK is the contract framework dependency. No application/client
-SDK is included in the PoC. There are no protocol trading fees, live upgrades,
-privileged rescue functions, arbitrary refund recipients, AMM pools, or bridges.
+In a **sale**, the issuer escrows a fixed quantity of RWA tokens. Buyers submit
+quantities and maximum prices, backed by deposits in the settlement asset.
+Higher-priced bids receive priority. If demand exceeds the available inventory,
+the marginal price determines the clearing price and equal-price marginal bids
+share the remaining quantity pro rata. An undersubscribed sale uses its reserve
+price if the minimum-fill condition is met.
+
+In a **buyback**, the issuer escrows a settlement-asset budget. Token holders
+submit the quantities they want to sell and their minimum prices, depositing the
+RWA tokens with their bids. Lower-priced asks receive priority. The contracts
+choose allocations at a common price while keeping total payments within the
+funded budget.
+
+Prices are denominated in a Stellar-issued settlement asset, such as a
+stablecoin. Each auction fixes its RWA token, settlement asset, price range,
+minimum fill, and deadlines when it is created.
+
+### One price, multiple participants
+
+Suppose an issuer offers **10 RWA tokens**:
+
+- Alice bids for 6 tokens at a maximum price of 9 settlement tokens each,
+  depositing 54.
+- Bob bids for 8 tokens at a maximum price of 7, depositing 56.
+
+The auction clears at **7**. Alice receives 6 RWA tokens for 42, and Bob receives
+4 for 28. Both pay the same unit price. Alice's unused deposit of 12 and Bob's
+unused deposit of 28 become credits they can withdraw. The issuer receives
+70 settlement tokens after the corresponding deliveries.
+
+This example is an executable scenario in the [local PoC](docs/POC_DEMO.md).
+The architecture specifies the exact [clearing and rounding rules](ARCHITECTURE.md#7-clearing-mathematics),
+including integer pro-rata allocation and buyback budget limits.
+
+## Open or sealed bidding
+
+An issuer can choose **open bids**, whose prices and quantities are visible as
+they are placed, or **sealed bids** using a commitment-and-reveal process.
+
+With sealed bidding, participants first deposit collateral and submit a hash
+binding their bid details to the auction. After bidding ends, they reveal the
+price, quantity, and secret needed to verify that commitment. Valid reveals enter
+the clearing calculation. Revealing requires a transaction from the bidder;
+there is no automatic decryption or reveal service.
+
+Sealed bidding hides the committed price and quantity before reveal. Deposits,
+participant addresses, and transaction timing remain public. Unrevealed bids do
+not contribute to the clearing price. A cleared auction may apply a previously
+configured non-reveal penalty of up to 50%; the default is zero. Cancellation
+refunds bids in full.
+
+## From funding to settlement
+
+1. **Create the auction.** The RWA token's current Stellar Asset Contract (SAC)
+   administrator authorizes an immutable configuration through the factory.
+2. **Fund the escrow.** After the escrow is authorized on both assets, the issuer
+   deposits the sale inventory or buyback budget before bidding starts.
+3. **Place funded bids.** Buyers deposit settlement tokens for a sale; sellers
+   deposit RWA tokens for a buyback. Sealed participants reveal in the later
+   reveal window.
+4. **Determine one price.** Permissionless, bounded transactions rank the book,
+   check eligible price contributors, and finalize the clearing result.
+5. **Claim and withdraw.** Participants resolve their allocations independently.
+   Successful claims deliver assets; refunds and proceeds become credits owned by
+   the original account and withdrawable in the corresponding asset.
+6. **Publish the outcome.** Anyone can submit the transactions that publish
+   verified clearing and execution observations to the registry.
+
+Funding removes the need to collect a winning bidder's payment after the auction.
+Delivery still depends on the asset's authorization rules and successful claim
+transactions. For a sale, issuer proceeds are credited only after the
+corresponding RWA delivery. For a buyback, both transfer legs succeed together
+or the invocation rolls back.
+
+## Compliance through the asset itself
+
+Crossing uses the authorization rules of the underlying SACs. Participants must
+be authorized on both assets when bidding. Before fixing the price, finalization
+checks every price-contributing bid atomically, including marginal bids whose
+individual allocation rounds to zero. Revoked contributors are excluded and
+clearing restarts without their demand or supply. Delivery checks authorization
+again at each claim.
+
+These checks keep auction participation and delivery aligned with token-level
+permissions. The asset administrator retains its existing freeze and clawback
+powers. A freeze can delay a withdrawal, and a clawback can leave escrow short
+of assets; funded bids do not remove those external asset risks. The contracts
+track liabilities and block outflows while a deficit exists.
+
+## Public prices with execution context
+
+The **PriceRegistry** records two separate observations: the auction's clearing
+result and its actual execution summary. This distinction matters because an
+allocation can remain undelivered, for example when authorization changes before
+a claim.
+
+The **OracleAdapter** exposes the registry's latest clearing observation for a
+fixed settlement asset through a read-only, partial SEP-40 interface. Applications
+can use the published records as inputs to their own pricing policies. They must
+consider execution volume, freshness, market participation, and manipulation
+risk when deciding how much weight to give an observation.
+
+## The contracts
+
+- **[Auction](contracts/auction/src/lib.rs)** holds escrow, accepts bids, computes
+  clearing, and handles delivery, credits, refunds, and expiry.
+- **[AuctionFactory](contracts/auction-factory/src/lib.rs)** creates
+  issuer-authorized auction instances and records their provenance.
+- **[PriceRegistry](contracts/price-registry/src/lib.rs)** verifies auction
+  provenance and publishes clearing and execution observations.
+- **[OracleAdapter](contracts/oracle-adapter/src/lib.rs)** provides read access to
+  registry prices in a fixed base asset.
+
+The [shared library](contracts/common/src/lib.rs) defines wire types, checked
+arithmetic, commitment encoding, and common validation. The
+[architecture](ARCHITECTURE.md) explains how these contracts fit together and
+specifies the wider application and integration design.
 
 ## Quick start
 
-Prerequisites:
-
-| Tool | Version / purpose |
-|---|---|
-| Rust through Rustup | **1.94.1**, selected by `rust-toolchain.toml` |
-| Rust target | `wasm32v1-none` |
-| Rust components | Rustfmt and Clippy |
-| Soroban SDK | **25.3.2**, pinned in `Cargo.toml` and resolved in `Cargo.lock` |
-| Python | 3.10+ for design models and repository checks |
-| Node.js | 18+ for independent BigInt/XDR checks; CI selects Node 22 |
-
-From the repository root:
+Install Rust through Rustup, Python 3.10+, and Node.js 18+; CI uses Node 22.
+The repository selects Rust **1.94.1** and pins Soroban SDK **25.3.2**.
 
 ```bash
+git clone https://github.com/crossing-finance-org/crossing.git
+cd crossing
 rustup show
 rustup component add rustfmt clippy
 rustup target add wasm32v1-none
 ./scripts/demo.sh
-./scripts/check.sh
 ```
 
-A fresh build needs dependency access. Cached environments can set
-`CARGO_NET_OFFLINE=true`. The local demonstration does not need Stellar CLI, a
-wallet, an RPC endpoint, testnet funds, or deployment credentials. Native host
-compilation is the largest first-build step; Cargo jobs are limited to one in
-`.cargo/config.toml` to reduce peak memory.
+The demonstration builds the contracts and executes three asserted scenarios
+against genuine SACs in Soroban's local test host:
 
-## Demonstration
+- An open sale with two winners paying one price, followed by asset delivery,
+  refund withdrawals, and publication of the execution result.
+- A sealed buyback that rejects an altered reveal, executes valid asks at one
+  price, and returns a non-revealer's deposit under the zero-penalty policy.
+- A compliance change that excludes a revoked winner and recomputes clearing.
 
-```bash
-./scripts/demo.sh
-```
+It runs locally without a wallet, RPC endpoint, or Testnet funds. The first build
+needs access to the locked dependencies. Cached environments can use
+`CARGO_NET_OFFLINE=true ./scripts/demo.sh`. See the
+[PoC guide](docs/POC_DEMO.md) for the inputs, assertions, and expected results.
 
-The script builds all four WASM contracts and runs three asserted scenarios
-against genuine Stellar Asset Contracts in Soroban's local test host:
+### Testnet evidence
 
-1. **Open sale:** an issuer escrows 10 RWA. Alice bids 6 at 9 and Bob bids 8 at 7.
-   The clearing price is 7; Alice receives 6 RWA for 42 quote, Bob receives 4 for
-   28, and they withdraw unused deposits. The registry exposes the price and
-   actual 10-RWA / 70-quote execution.
-2. **Sealed buyback:** the issuer escrows 100 quote. Valid reveals of 4 RWA at 8
-   and 6 at 10 both execute at 10. An altered reveal is rejected. A non-revealer
-   withdraws its complete 3-RWA deposit.
-3. **Compliance:** a winner revoked after the preliminary sweep is excluded by
-   the atomic finalizer. Clearing restarts without its demand, and its full
-   deposit remains recoverable.
+The contracts have also been deployed to and exercised on Stellar Testnet. The
+[deployment manifest](deployments/testnet.json) records contract addresses, WASM
+hashes, source provenance, and build inputs. The
+[transaction log](deployments/TESTNET_TRANSACTIONS.md) contains **106 transaction
+references**, covering deployment, funded auctions, reveals, compliance changes,
+delivery, deadline recovery, withdrawals, and registry publication.
 
-The displayed sale/buyback amounts use whole tokens encoded with seven decimals.
-The [demo guide](docs/POC_DEMO.md) explains assertions and local-host boundaries.
-These are executable contract demonstrations, not signed public-network trades.
+These public-network records complement the reproducible local demonstration.
+The repository contains the contract code, test fixtures, demo scenarios, and
+technical review records needed to inspect the PoC.
 
-## Protocol lifecycle
-
-1. **Create.** The current RWA SAC administrator authorizes an immutable auction
-   configuration through `AuctionFactory`. Creation deploys the escrow but moves
-   no assets.
-2. **Authorize and fund.** Asset administrators authorize the escrow address on
-   both SACs. Before the start ledger, the issuer deposits the exact sale inventory
-   or buyback budget. Funding verifies deployment provenance and current authority.
-3. **Bid.** Every bidder needs authorization on both assets. Open sale bids lock
-   their maximum quote obligation; buyback bids lock RWA quantity. Sealed bidders
-   lock a declared maximum and submit a domain-bound commitment.
-4. **Reveal and close.** Sealed bids reveal inside their own window. Permissionless
-   bounded calls compute the candidate and sweep price-contributing bids. Finalization checks
-   every price-contributing bid atomically, including marginal bids rounded to
-   zero; definite revocations permanently exclude bids and restart clearing before
-   the closing deadline.
-5. **Deliver or refund.** Claims check authorization again. Successful trades
-   deliver assets; undelivered trades retain full bidder refund backing. Sale
-   proceeds become issuer credit only after the corresponding RWA delivery.
-6. **Withdraw and publish.** Credit owners withdraw their own original asset.
-   Anyone can publish verified immutable clearing/execution observations. After
-   deadlines, permissionless expiry preserves refunds rather than forfeiting them.
-
-Creation and funding are separate because an `AUTH_REQUIRED` asset cannot be sent
-to a new escrow until its asset administrator authorizes that address.
-
-## Economics and compliance
-
-Amounts are token base units, prices are fixed-point values with `S = 10^7`, and
-both supported assets have seven decimals. Intermediate multiplication/division
-uses U256 with checked i128 results.
-
-- Sales rank bids from highest price downward. Oversubscribed books ration the
-  marginal price tick; undersubscribed books fill at the reserve if actual integer
-  volume meets the minimum. Deposits/payments use `ceil(quantity × price / S)`.
-- Buybacks rank asks from lowest upward and reprice the entire accepted prefix at
-  the uniform price. Payments use `floor(quantity × price / S)`. Total quote paid
-  cannot exceed budget; sparse asks and rounding can leave unused funds.
-- Equal-price marginal allocations round down pro rata. Report actual filled
-  volume separately from the nominal candidate; dust and zero-value fills can
-  cause a minimum-fill cancellation. The nominal marginal price can survive zero
-  individual marginal fills; every contributing bid must still be authorized.
-- Three compliance checks cover admission, atomic clearing, and delivery. An
-  unavailable authorization query aborts; it is not treated as definite revocation.
-
-See [clearing mathematics](ARCHITECTURE.md#7-clearing-mathematics) and
-[settlement accounting](ARCHITECTURE.md#9-settlement-refunds-and-conservation)
-for exact rules and per-asset liability equations.
-
-## Checks and test evidence
+## Verify the implementation
 
 ```bash
 ./scripts/check.sh
 ```
 
-The check script runs formatting, locked release WASM builds, Rust tests, Clippy
-with warnings denied, design tests, independent XDR and clearing-vector checks,
-and local documentation-link checks. Before individual integration runs, build
-the WASMs and their source/artifact manifest. Tests load and verify those files
-from Cargo's configured target directory; `CARGO_TARGET_DIR` is supported.
+This runs formatting, locked WASM builds, Rust tests, Clippy, economic-model
+checks, independent commitment and clearing vectors, tooling regressions, and
+documentation checks. The suites contain **60 integration tests**, **9 shared
+Rust unit tests**, **50 design tests**, and **15 tooling tests**. The integration
+suite includes 48 independently generated clearing books. Larger generated-book
+and accounting-lifecycle comparisons run against the independent design models.
 
-```bash
-python3 scripts/wasm_artifacts.py build
-cargo test --workspace --locked -- --test-threads=1
-cargo clippy --workspace --all-targets --locked -- -D warnings
-python3 -m unittest discover -s tests/design -v
-node tools/design/check_commitment.mjs
-python3 tools/design/generate_contract_vectors.py --check
-```
-
-| Evidence | Coverage |
-|---|---|
-| 60 compiled-WASM integration tests | Genuine SAC transfers, scoped authorization, sale/buyback, commit/reveal, the optional non-reveal penalty, price-contributor compliance, wide amounts, rollback, credits, deficits, expiry, factory bootstrap/namespace/registration, financial TTL, registry ordering, and the OracleAdapter's SEP-40 read surface |
-| 48 contract clearing vectors within that suite | Independent BigInt expected values, both modes, one-price and 65-tick grids, fractional prices, varied chunk sizes, minimum failures, reverse claims, and complete liability withdrawal |
-| 9 shared Rust unit tests | Wide arithmetic, configuration/TTL/grid bounds, penalty/allocation rules, canonical XDR vectors, and public wire-type equivalence |
-| 50 design tests | 10,000 generated books, 6 extreme-i128 books, 1,000 generated accounting lifecycles, and targeted regressions |
-| Independent encoders/reference | Node BigInt economic reference and 36 fixed canonical ScVal-XDR commitment vectors covering all 22 Config fields and all commitment components |
-| Resource regressions | Maximum Sale/Buyback and late-exclusion finalizers fit local invocation limits, with ledger/event/return/key/entry byte measurements; network qualification remains open |
-| 15 tooling tests | Coverage report integrity, exclusions, raw-contract thresholds, stale diagnostics, failure cleanup, WASM identity/source checks, custom targets, and artifact packaging |
-
-The 10,000-book comparison is model evidence, not 10,000 contract executions.
-Most authorization tests use exact mock invocation trees. Cryptographic regressions
-exercise real Ed25519 classic-account/custom-account credentials, signed-call
-mutation, nonce/expiry, replay, and authentication callback re-entry rollback.
-Two further cases verify real classic-admin creation/funding and 2-of-2 multisig
-weight, membership, sorting, duplication, and rollback rules.
-These run in the local host and do not submit signed network transactions. See
-the [cryptographic review](docs/security/CRYPTOGRAPHIC_REVIEW.md).
-The separate [coverage workflow](docs/TESTING.md) measures
-native executable source lines and enforces at least 95% production coverage in
-every contract source. Raw LLVM totals and the separate SDK test-helper policy
-remain visible. No branch/path completeness, formal proof, or independent audit
-is claimed. [The contract review](docs/security/CONTRACT_REVIEW.md) records findings,
-measured resources, dependency review, and remaining evidence. Review fixes
-include hidden-quantity overflow reservation before Sealed Sale deposits,
-oracle instance/code maintenance, issued-SAC base validation, and a 24 October
-2026 fix for a non-reveal-penalty timing bypass (the penalty could previously
-be dodged by simply letting the delivery deadline pass unresolved). Penalty
-reason precedence, 4096-tick repeated exclusions, expired snapshot recovery,
-registry pair isolation, and publication failure isolation have direct
-regressions. The coverage runner also rejects incomplete/mismatched reports
-and prevents reuse of older passing summaries after a failed run. The
-[consolidated findings and fixes report](docs/security/FINDINGS_AND_FIXES.md)
-gathers every finding from every review pass, with a plain-language
-explanation of each defect and its fix, in one place.
-
-The [auction logic review](docs/security/AUCTION_LOGIC_REVIEW.md) explains clearing
-priority, budget/collateral bounds, rounding, price-contributor authorization,
-and per-asset settlement conservation.
-
-## Source coverage
+For source coverage:
 
 ```bash
 rustup component add llvm-tools-preview
@@ -229,121 +217,31 @@ cargo install cargo-llvm-cov --version 0.9.1 --locked
 ./scripts/coverage.sh
 ```
 
-The gate checks **each contract and the shared implementation separately** against
-95% production executable source-line coverage. Test fixtures and precisely
-identified SDK-generated host-only bridge regions are outside that production
-metric; raw LLVM totals and every such region are retained. Reports are written
-to `target/coverage/`; GitHub CI retains HTML/JSON as `contract-coverage`.
-Native instrumentation complements the mandatory all-WASM suite and does not
-measure guest instruction coverage. [Testing methodology](docs/TESTING.md) explains
-the native deployment adapter, exclusions, and remaining test boundaries.
+Coverage gates assess each production source separately at 95%, and additionally
+require at least 95% unadjusted raw line coverage in each deployable contract.
+[Testing and coverage](docs/TESTING.md) explains native instrumentation, the
+compiled-WASM evidence, precise SDK exclusions, and measured results. GitHub CI
+runs the checks and retains coverage reports and the tested WASMs with their
+checksums and build metadata. Download these artifacts from the
+[Contracts workflow](https://github.com/crossing-finance-org/crossing/actions/workflows/ci.yml).
 
-Measured raw LLVM line coverage: **Auction 97.13%**, **Factory 97.53%**,
-**Registry 98.76%**, and **OracleAdapter 97.83%** (100% of production lines).
-Each deployable contract must independently remain at or above 95%. The shared
-library reaches 99.62% for production lines; its raw total is 92.25% including
-SDK test-only bridge attributes, disclosed in the testing guide.
+## Scope and further review
 
-## Limits and security
+This repository is a working smart-contract PoC exercised locally and on Testnet.
+The current release supports **16 total bids per auction**, including unrevealed
+commitments, and genuine issued SAC assets with seven decimals. Closing, claims,
+publication, and maintenance require transactions from someone willing to submit
+them.
 
-- **16 total bids per auction**, including non-reveals. The earlier 32-bid draft
-  exceeded the pinned SDK's default footprint guard. Larger capacity requires
-  reviewed changes and measurements.
-- **Issued SAC assets only.** Native XLM and arbitrary custom tokens are excluded
-  on both sides. Delegated RWA SAC administration is supported.
-- **Asset-admin powers remain.** Freezing can delay delivery/refund withdrawals;
-  clawback can create a deficit. The contracts preserve liabilities and block
-  outflows while insolvent, but cannot replace missing assets.
-- **Credits are owned funds.** A credited refund is not a completed transfer. It
-  stays with the same owner and asset, and has no protocol forfeiture deadline.
-  Keeping/restoring archived records still requires someone to pay storage costs.
-- **Financial retention has a defined horizon.** Auction construction protects
-  instance and reused code through delivery plus 120,960 recovery ledgers; rolling
-  maintenance targets 518,400 ledgers within runtime limits. Factory/registry
-  dependencies have separate maintenance/restoration requirements.
-- **Sealed metadata is public.** Deposits, identities, timing, and counts can leak
-  information. By default non-reveal carries no penalty; an issuer may instead
-  configure a bounded penalty (up to 50%) on never-revealed bids specifically —
-  losing a salt still excludes the bid from clearing either way.
-  Auction cancellation refunds in full; on a cleared auction, the `NonReveal`
-  penalty applies before and after delivery expiry, including when the owner
-  loses authorization. Revealed expired bids refund fully. See architecture §6.3.
-- **Historical prices need interpretation.** Allocation can exceed actual delivery,
-  related accounts can influence a price, and observations can become stale.
-- **Permissionless work still needs a payer.** Closing, expiry, maintenance,
-  restoration, and publication do not happen without transactions.
+The [contract review](docs/security/CONTRACT_REVIEW.md),
+[auction logic review](docs/security/AUCTION_LOGIC_REVIEW.md), and
+[findings and fixes](docs/security/FINDINGS_AND_FIXES.md) describe the reviewed
+behavior and evidence. Mainnet qualification and an independent external audit
+remain separate release requirements. Report vulnerabilities through
+[SECURITY.md](SECURITY.md).
 
-Report vulnerabilities through [SECURITY.md](SECURITY.md). Production work still
-includes multisig/wallet and additional account adversaries, network archival
-restoration, broader stateful comparisons, full resource qualification, and
-independent review. [Release gates](docs/security/DESIGN_AUDIT.md#5-open-implementation-and-deployment-gates)
-track the broader requirements.
+For implementation details and contribution guidance, start with the
+[documentation index](docs/README.md), [contract API](docs/reference/CONTRACT_API.md),
+and [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Repository layout
-
-```text
-.github/                   # CI, dependency updates, issue/PR templates
-.cargo/                    # build settings and cargo wasm alias
-contracts/
-  common/                  # shared wire types, checked math, SAC/commitment helpers
-    src/test.rs            # direct unit tests for validation/arithmetic/commitment helpers
-  auction/                 # escrow, clearing, compliance, delivery, credits
-    tests/lifecycle.rs     # integration-test module registration and shared imports
-    tests/scenarios/       # behavior, authorization, demo, and resource regressions
-    tests/support/         # shared fixture, verified WASM loader, bootstrap/coverage adapters
-  auction-factory/         # issuer-authorized deployment and discovery
-  price-registry/          # verified clearing and execution observations
-  oracle-adapter/          # read-only, partial SEP-40 surface over the registry
-deployments/
-  testnet.json             # current Testnet contract IDs, WASM hashes, and deploy salt
-  TESTNET_TRANSACTIONS.md  # dated log of every on-chain Testnet transaction, with hashes
-docs/
-  README.md                # documentation index
-  POC_DEMO.md              # reproducible local demonstration
-  TESTING.md               # suite layers, counts, and coverage methodology
-  reference/               # current contract API
-  operations/              # build, release, maintenance, incident runbooks
-  security/                # design/contract/auction-logic/cryptographic reviews,
-                            # release gates, and FINDINGS_AND_FIXES.md (every
-                            # finding across all passes, in plain language)
-scripts/                   # checks, demo, coverage, verified WASM build/packaging
-tests/
-  design/                  # economic/accounting model tests
-  tooling/                 # adversarial coverage-gate and WASM artifact checks
-  vectors/                 # canonical commitment/domain and independent clearing fixtures
-tools/design/              # independent models, encoders, fixture generation
-ARCHITECTURE.md             # full product technical architecture
-Cargo.toml / Cargo.lock    # pinned contract workspace and dependencies
-rust-toolchain.toml         # compiler and WASM target
-LICENSE                    # Apache License, Version 2.0
-CONTRIBUTING.md
-SECURITY.md
-CHANGELOG.md
-```
-
-`contracts/auction/tests/scenarios/` groups the integration suite by behavior:
-clearing, accounting, authorization, commitments, lifecycle, factory, registry,
-demonstration, and independent vectors, alongside focused cryptographic, classic
-authority, oracle, penalty, resource, and recovery regressions. Shared setup and
-artifact loading live in `support/`. The native coverage adapter remains an
-explicit test-only helper in that directory. All scenarios run through the same
-`lifecycle` test binary; existing test-name filters remain usable.
-
-Planned SDK/application packages are documented in the architecture; empty package
-scaffolds are intentionally absent. Funding proposals and Word documents are
-excluded from this repository. Local editor/tool state directories are excluded
-in `.gitignore`.
-
-## Contributing and license
-
-Read [CONTRIBUTING.md](CONTRIBUTING.md) before changing economic rules, authority,
-wire types, commitments, or storage. Include regression evidence and synchronize
-the architecture with behavior. The GitHub workflow runs the same local check
-script; it does not deploy contracts.
-
-Licensed under the [Apache License, Version 2.0](LICENSE). Crossing is open
-infrastructure: a permissive license with an explicit patent grant lets
-wallets, exchanges, indexers, and other protocols integrate or build on the
-contracts without a separate grant from the authors, and the patent clause
-specifically protects that integration work. Every crate in the workspace
-declares `license.workspace = true`, resolving to the same Apache-2.0 term.
+Licensed under [Apache-2.0](LICENSE).
