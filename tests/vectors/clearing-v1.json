@@ -1,0 +1,2579 @@
+{
+  "version": 1,
+  "seed": 658711,
+  "cases": [
+    {
+      "name": "seed-a0d17-case-0",
+      "config": {
+        "mode": "sale",
+        "supply": "46",
+        "scale": "10000000",
+        "min_price": "20000000",
+        "min_fill": "5"
+      },
+      "max_price": "20000000",
+      "tick_size": "5000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "20000000",
+          "quantity": "8",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "31",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "34",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "13",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "34",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "27",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "7",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "16",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "21",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "25",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "28",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "1",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "2",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "21",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "14",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "27",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "20000000",
+        "allocations": [
+          "1",
+          "4",
+          "5",
+          "1",
+          "5",
+          "4",
+          "1",
+          "2",
+          "3",
+          "3",
+          "4",
+          "0",
+          "0",
+          "3",
+          "2",
+          "4"
+        ],
+        "payments": [
+          "2",
+          "8",
+          "10",
+          "2",
+          "10",
+          "8",
+          "2",
+          "4",
+          "6",
+          "6",
+          "8",
+          "0",
+          "0",
+          "6",
+          "4",
+          "8"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-1",
+      "config": {
+        "mode": "buyback",
+        "supply": "170",
+        "scale": "10000000",
+        "min_price": "20000000",
+        "min_fill": "29"
+      },
+      "max_price": "210000000",
+      "tick_size": "10000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "140000000",
+          "quantity": "14",
+          "excluded": false
+        },
+        {
+          "price": "90000000",
+          "quantity": "8",
+          "excluded": false
+        },
+        {
+          "price": "130000000",
+          "quantity": "32",
+          "excluded": false
+        },
+        {
+          "price": "160000000",
+          "quantity": "32",
+          "excluded": false
+        },
+        {
+          "price": "70000000",
+          "quantity": "34",
+          "excluded": false
+        },
+        {
+          "price": "110000000",
+          "quantity": "26",
+          "excluded": false
+        },
+        {
+          "price": "50000000",
+          "quantity": "8",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": null,
+        "allocations": [
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        "payments": [
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-2",
+      "config": {
+        "mode": "sale",
+        "supply": "79",
+        "scale": "10000000",
+        "min_price": "10000000",
+        "min_fill": "4"
+      },
+      "max_price": "650000000",
+      "tick_size": "10000000",
+      "min_bid": "1",
+      "bids": [],
+      "expected": {
+        "price": null,
+        "allocations": [],
+        "payments": []
+      }
+    },
+    {
+      "name": "seed-a0d17-case-3",
+      "config": {
+        "mode": "buyback",
+        "supply": "3",
+        "scale": "10000000",
+        "min_price": "10000000",
+        "min_fill": "2"
+      },
+      "max_price": "10000000",
+      "tick_size": "5000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "10000000",
+          "quantity": "31",
+          "excluded": false
+        },
+        {
+          "price": "10000000",
+          "quantity": "23",
+          "excluded": false
+        },
+        {
+          "price": "10000000",
+          "quantity": "14",
+          "excluded": false
+        },
+        {
+          "price": "10000000",
+          "quantity": "13",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": null,
+        "allocations": [
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        "payments": [
+          "0",
+          "0",
+          "0",
+          "0"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-4",
+      "config": {
+        "mode": "sale",
+        "supply": "139",
+        "scale": "10000000",
+        "min_price": "10000000",
+        "min_fill": "16"
+      },
+      "max_price": "200000000",
+      "tick_size": "10000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "20000000",
+          "quantity": "22",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "10000000",
+        "allocations": [
+          "22"
+        ],
+        "payments": [
+          "22"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-5",
+      "config": {
+        "mode": "buyback",
+        "supply": "12",
+        "scale": "10000000",
+        "min_price": "10000000",
+        "min_fill": "12"
+      },
+      "max_price": "650000000",
+      "tick_size": "10000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "530000000",
+          "quantity": "4",
+          "excluded": false
+        },
+        {
+          "price": "550000000",
+          "quantity": "13",
+          "excluded": false
+        },
+        {
+          "price": "520000000",
+          "quantity": "14",
+          "excluded": false
+        },
+        {
+          "price": "490000000",
+          "quantity": "13",
+          "excluded": false
+        },
+        {
+          "price": "30000000",
+          "quantity": "3",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "23",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": null,
+        "allocations": [
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        "payments": [
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-6",
+      "config": {
+        "mode": "sale",
+        "supply": "29",
+        "scale": "10000000",
+        "min_price": "5000000",
+        "min_fill": "14"
+      },
+      "max_price": "5000000",
+      "tick_size": "5000000",
+      "min_bid": "2",
+      "bids": [],
+      "expected": {
+        "price": null,
+        "allocations": [],
+        "payments": []
+      }
+    },
+    {
+      "name": "seed-a0d17-case-7",
+      "config": {
+        "mode": "buyback",
+        "supply": "166",
+        "scale": "10000000",
+        "min_price": "5000000",
+        "min_fill": "21"
+      },
+      "max_price": "100000000",
+      "tick_size": "5000000",
+      "min_bid": "2",
+      "bids": [
+        {
+          "price": "25000000",
+          "quantity": "31",
+          "excluded": false
+        },
+        {
+          "price": "70000000",
+          "quantity": "35",
+          "excluded": false
+        },
+        {
+          "price": "65000000",
+          "quantity": "3",
+          "excluded": false
+        },
+        {
+          "price": "45000000",
+          "quantity": "29",
+          "excluded": false
+        },
+        {
+          "price": "35000000",
+          "quantity": "10",
+          "excluded": false
+        },
+        {
+          "price": "70000000",
+          "quantity": "19",
+          "excluded": false
+        },
+        {
+          "price": "40000000",
+          "quantity": "14",
+          "excluded": false
+        },
+        {
+          "price": "90000000",
+          "quantity": "24",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "35000000",
+        "allocations": [
+          "31",
+          "0",
+          "0",
+          "0",
+          "10",
+          "0",
+          "0",
+          "0"
+        ],
+        "payments": [
+          "108",
+          "0",
+          "0",
+          "0",
+          "35",
+          "0",
+          "0",
+          "0"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-8",
+      "config": {
+        "mode": "sale",
+        "supply": "6",
+        "scale": "10000000",
+        "min_price": "5000000",
+        "min_fill": "6"
+      },
+      "max_price": "325000000",
+      "tick_size": "5000000",
+      "min_bid": "2",
+      "bids": [
+        {
+          "price": "130000000",
+          "quantity": "25",
+          "excluded": false
+        },
+        {
+          "price": "10000000",
+          "quantity": "30",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "2",
+          "excluded": false
+        },
+        {
+          "price": "240000000",
+          "quantity": "22",
+          "excluded": false
+        },
+        {
+          "price": "275000000",
+          "quantity": "33",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "275000000",
+        "allocations": [
+          "0",
+          "0",
+          "0",
+          "0",
+          "6"
+        ],
+        "payments": [
+          "0",
+          "0",
+          "0",
+          "0",
+          "165"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-9",
+      "config": {
+        "mode": "buyback",
+        "supply": "98",
+        "scale": "10000000",
+        "min_price": "5000000",
+        "min_fill": "2"
+      },
+      "max_price": "5000000",
+      "tick_size": "10000000",
+      "min_bid": "2",
+      "bids": [],
+      "expected": {
+        "price": null,
+        "allocations": [],
+        "payments": []
+      }
+    },
+    {
+      "name": "seed-a0d17-case-10",
+      "config": {
+        "mode": "sale",
+        "supply": "84",
+        "scale": "10000000",
+        "min_price": "5000000",
+        "min_fill": "14"
+      },
+      "max_price": "195000000",
+      "tick_size": "10000000",
+      "min_bid": "2",
+      "bids": [
+        {
+          "price": "185000000",
+          "quantity": "17",
+          "excluded": false
+        },
+        {
+          "price": "165000000",
+          "quantity": "2",
+          "excluded": false
+        },
+        {
+          "price": "115000000",
+          "quantity": "35",
+          "excluded": false
+        },
+        {
+          "price": "105000000",
+          "quantity": "4",
+          "excluded": false
+        },
+        {
+          "price": "35000000",
+          "quantity": "12",
+          "excluded": false
+        },
+        {
+          "price": "65000000",
+          "quantity": "20",
+          "excluded": false
+        },
+        {
+          "price": "45000000",
+          "quantity": "35",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "45000000",
+        "allocations": [
+          "17",
+          "2",
+          "35",
+          "4",
+          "0",
+          "20",
+          "6"
+        ],
+        "payments": [
+          "77",
+          "9",
+          "158",
+          "18",
+          "0",
+          "90",
+          "27"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-11",
+      "config": {
+        "mode": "buyback",
+        "supply": "43",
+        "scale": "10000000",
+        "min_price": "20000000",
+        "min_fill": "5"
+      },
+      "max_price": "660000000",
+      "tick_size": "10000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "80000000",
+          "quantity": "33",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "31",
+          "excluded": false
+        },
+        {
+          "price": "550000000",
+          "quantity": "6",
+          "excluded": false
+        },
+        {
+          "price": "250000000",
+          "quantity": "9",
+          "excluded": false
+        },
+        {
+          "price": "660000000",
+          "quantity": "7",
+          "excluded": false
+        },
+        {
+          "price": "580000000",
+          "quantity": "19",
+          "excluded": false
+        },
+        {
+          "price": "660000000",
+          "quantity": "31",
+          "excluded": false
+        },
+        {
+          "price": "500000000",
+          "quantity": "8",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "20000000",
+        "allocations": [
+          "0",
+          "21",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        "payments": [
+          "0",
+          "42",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-12",
+      "config": {
+        "mode": "sale",
+        "supply": "3",
+        "scale": "10000000",
+        "min_price": "10000000",
+        "min_fill": "1"
+      },
+      "max_price": "10000000",
+      "tick_size": "10000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "10000000",
+          "quantity": "17",
+          "excluded": false
+        },
+        {
+          "price": "10000000",
+          "quantity": "7",
+          "excluded": false
+        },
+        {
+          "price": "10000000",
+          "quantity": "19",
+          "excluded": false
+        },
+        {
+          "price": "10000000",
+          "quantity": "35",
+          "excluded": false
+        },
+        {
+          "price": "10000000",
+          "quantity": "17",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "10000000",
+        "allocations": [
+          "0",
+          "0",
+          "0",
+          "1",
+          "0"
+        ],
+        "payments": [
+          "0",
+          "0",
+          "0",
+          "1",
+          "0"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-13",
+      "config": {
+        "mode": "buyback",
+        "supply": "128",
+        "scale": "10000000",
+        "min_price": "10000000",
+        "min_fill": "16"
+      },
+      "max_price": "200000000",
+      "tick_size": "10000000",
+      "min_bid": "1",
+      "bids": [],
+      "expected": {
+        "price": null,
+        "allocations": [],
+        "payments": []
+      }
+    },
+    {
+      "name": "seed-a0d17-case-14",
+      "config": {
+        "mode": "sale",
+        "supply": "38",
+        "scale": "10000000",
+        "min_price": "20000000",
+        "min_fill": "21"
+      },
+      "max_price": "660000000",
+      "tick_size": "10000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "510000000",
+          "quantity": "33",
+          "excluded": false
+        },
+        {
+          "price": "340000000",
+          "quantity": "29",
+          "excluded": false
+        },
+        {
+          "price": "610000000",
+          "quantity": "15",
+          "excluded": false
+        },
+        {
+          "price": "550000000",
+          "quantity": "31",
+          "excluded": false
+        },
+        {
+          "price": "190000000",
+          "quantity": "34",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "550000000",
+        "allocations": [
+          "0",
+          "0",
+          "15",
+          "23",
+          "0"
+        ],
+        "payments": [
+          "0",
+          "0",
+          "825",
+          "1265",
+          "0"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-15",
+      "config": {
+        "mode": "buyback",
+        "supply": "94",
+        "scale": "10000000",
+        "min_price": "20000000",
+        "min_fill": "8"
+      },
+      "max_price": "20000000",
+      "tick_size": "5000000",
+      "min_bid": "1",
+      "bids": [],
+      "expected": {
+        "price": null,
+        "allocations": [],
+        "payments": []
+      }
+    },
+    {
+      "name": "seed-a0d17-case-16",
+      "config": {
+        "mode": "sale",
+        "supply": "13",
+        "scale": "10000000",
+        "min_price": "20000000",
+        "min_fill": "3"
+      },
+      "max_price": "115000000",
+      "tick_size": "5000000",
+      "min_bid": "1",
+      "bids": [],
+      "expected": {
+        "price": null,
+        "allocations": [],
+        "payments": []
+      }
+    },
+    {
+      "name": "seed-a0d17-case-17",
+      "config": {
+        "mode": "buyback",
+        "supply": "65",
+        "scale": "10000000",
+        "min_price": "5000000",
+        "min_fill": "20"
+      },
+      "max_price": "325000000",
+      "tick_size": "5000000",
+      "min_bid": "2",
+      "bids": [
+        {
+          "price": "25000000",
+          "quantity": "11",
+          "excluded": false
+        },
+        {
+          "price": "150000000",
+          "quantity": "32",
+          "excluded": false
+        },
+        {
+          "price": "265000000",
+          "quantity": "13",
+          "excluded": false
+        },
+        {
+          "price": "70000000",
+          "quantity": "13",
+          "excluded": false
+        },
+        {
+          "price": "135000000",
+          "quantity": "31",
+          "excluded": false
+        },
+        {
+          "price": "90000000",
+          "quantity": "4",
+          "excluded": false
+        },
+        {
+          "price": "70000000",
+          "quantity": "19",
+          "excluded": false
+        },
+        {
+          "price": "220000000",
+          "quantity": "11",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": null,
+        "allocations": [
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        "payments": [
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-18",
+      "config": {
+        "mode": "sale",
+        "supply": "108",
+        "scale": "10000000",
+        "min_price": "20000000",
+        "min_fill": "11"
+      },
+      "max_price": "20000000",
+      "tick_size": "10000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "20000000",
+          "quantity": "12",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "28",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "15",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "19",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "20",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "28",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "11",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "4",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "20000000",
+        "allocations": [
+          "9",
+          "22",
+          "11",
+          "14",
+          "15",
+          "22",
+          "8",
+          "3"
+        ],
+        "payments": [
+          "18",
+          "44",
+          "22",
+          "28",
+          "30",
+          "44",
+          "16",
+          "6"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-19",
+      "config": {
+        "mode": "buyback",
+        "supply": "173",
+        "scale": "10000000",
+        "min_price": "10000000",
+        "min_fill": "29"
+      },
+      "max_price": "105000000",
+      "tick_size": "5000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "10000000",
+          "quantity": "32",
+          "excluded": false
+        },
+        {
+          "price": "45000000",
+          "quantity": "11",
+          "excluded": false
+        },
+        {
+          "price": "50000000",
+          "quantity": "3",
+          "excluded": false
+        },
+        {
+          "price": "85000000",
+          "quantity": "1",
+          "excluded": false
+        },
+        {
+          "price": "10000000",
+          "quantity": "31",
+          "excluded": false
+        },
+        {
+          "price": "90000000",
+          "quantity": "7",
+          "excluded": false
+        },
+        {
+          "price": "70000000",
+          "quantity": "33",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "10000000",
+        "allocations": [
+          "32",
+          "0",
+          "0",
+          "0",
+          "31",
+          "0",
+          "0"
+        ],
+        "payments": [
+          "32",
+          "0",
+          "0",
+          "0",
+          "31",
+          "0",
+          "0"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-20",
+      "config": {
+        "mode": "sale",
+        "supply": "74",
+        "scale": "10000000",
+        "min_price": "10000000",
+        "min_fill": "19"
+      },
+      "max_price": "650000000",
+      "tick_size": "10000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "580000000",
+          "quantity": "6",
+          "excluded": false
+        },
+        {
+          "price": "220000000",
+          "quantity": "23",
+          "excluded": false
+        },
+        {
+          "price": "60000000",
+          "quantity": "16",
+          "excluded": false
+        },
+        {
+          "price": "430000000",
+          "quantity": "1",
+          "excluded": false
+        },
+        {
+          "price": "280000000",
+          "quantity": "4",
+          "excluded": false
+        },
+        {
+          "price": "240000000",
+          "quantity": "33",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "60000000",
+        "allocations": [
+          "6",
+          "23",
+          "7",
+          "1",
+          "4",
+          "33"
+        ],
+        "payments": [
+          "36",
+          "138",
+          "42",
+          "6",
+          "24",
+          "198"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-21",
+      "config": {
+        "mode": "buyback",
+        "supply": "16",
+        "scale": "10000000",
+        "min_price": "5000000",
+        "min_fill": "2"
+      },
+      "max_price": "5000000",
+      "tick_size": "5000000",
+      "min_bid": "2",
+      "bids": [],
+      "expected": {
+        "price": null,
+        "allocations": [],
+        "payments": []
+      }
+    },
+    {
+      "name": "seed-a0d17-case-22",
+      "config": {
+        "mode": "sale",
+        "supply": "119",
+        "scale": "10000000",
+        "min_price": "20000000",
+        "min_fill": "13"
+      },
+      "max_price": "210000000",
+      "tick_size": "10000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "30000000",
+          "quantity": "5",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": null,
+        "allocations": [
+          "0"
+        ],
+        "payments": [
+          "0"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-23",
+      "config": {
+        "mode": "buyback",
+        "supply": "69",
+        "scale": "10000000",
+        "min_price": "10000000",
+        "min_fill": "8"
+      },
+      "max_price": "650000000",
+      "tick_size": "10000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "280000000",
+          "quantity": "4",
+          "excluded": false
+        },
+        {
+          "price": "370000000",
+          "quantity": "16",
+          "excluded": false
+        },
+        {
+          "price": "10000000",
+          "quantity": "22",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "10000000",
+        "allocations": [
+          "0",
+          "0",
+          "22"
+        ],
+        "payments": [
+          "0",
+          "0",
+          "22"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-24",
+      "config": {
+        "mode": "sale",
+        "supply": "54",
+        "scale": "10000000",
+        "min_price": "5000000",
+        "min_fill": "25"
+      },
+      "max_price": "5000000",
+      "tick_size": "5000000",
+      "min_bid": "2",
+      "bids": [
+        {
+          "price": "5000000",
+          "quantity": "14",
+          "excluded": false
+        },
+        {
+          "price": "5000000",
+          "quantity": "19",
+          "excluded": false
+        },
+        {
+          "price": "5000000",
+          "quantity": "33",
+          "excluded": false
+        },
+        {
+          "price": "5000000",
+          "quantity": "11",
+          "excluded": false
+        },
+        {
+          "price": "5000000",
+          "quantity": "29",
+          "excluded": false
+        },
+        {
+          "price": "5000000",
+          "quantity": "33",
+          "excluded": false
+        },
+        {
+          "price": "5000000",
+          "quantity": "9",
+          "excluded": false
+        },
+        {
+          "price": "5000000",
+          "quantity": "21",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "5000000",
+        "allocations": [
+          "4",
+          "6",
+          "10",
+          "3",
+          "9",
+          "10",
+          "2",
+          "6"
+        ],
+        "payments": [
+          "2",
+          "3",
+          "5",
+          "2",
+          "5",
+          "5",
+          "1",
+          "3"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-25",
+      "config": {
+        "mode": "buyback",
+        "supply": "83",
+        "scale": "10000000",
+        "min_price": "5000000",
+        "min_fill": "5"
+      },
+      "max_price": "100000000",
+      "tick_size": "5000000",
+      "min_bid": "2",
+      "bids": [
+        {
+          "price": "20000000",
+          "quantity": "19",
+          "excluded": false
+        },
+        {
+          "price": "5000000",
+          "quantity": "30",
+          "excluded": false
+        },
+        {
+          "price": "95000000",
+          "quantity": "35",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "20000000",
+        "allocations": [
+          "11",
+          "30",
+          "0"
+        ],
+        "payments": [
+          "22",
+          "60",
+          "0"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-26",
+      "config": {
+        "mode": "sale",
+        "supply": "16",
+        "scale": "10000000",
+        "min_price": "5000000",
+        "min_fill": "8"
+      },
+      "max_price": "645000000",
+      "tick_size": "10000000",
+      "min_bid": "2",
+      "bids": [
+        {
+          "price": "395000000",
+          "quantity": "11",
+          "excluded": false
+        },
+        {
+          "price": "605000000",
+          "quantity": "35",
+          "excluded": false
+        },
+        {
+          "price": "635000000",
+          "quantity": "13",
+          "excluded": false
+        },
+        {
+          "price": "285000000",
+          "quantity": "16",
+          "excluded": false
+        },
+        {
+          "price": "355000000",
+          "quantity": "31",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "605000000",
+        "allocations": [
+          "0",
+          "3",
+          "13",
+          "0",
+          "0"
+        ],
+        "payments": [
+          "0",
+          "182",
+          "787",
+          "0",
+          "0"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-27",
+      "config": {
+        "mode": "buyback",
+        "supply": "175",
+        "scale": "10000000",
+        "min_price": "5000000",
+        "min_fill": "15"
+      },
+      "max_price": "5000000",
+      "tick_size": "10000000",
+      "min_bid": "2",
+      "bids": [],
+      "expected": {
+        "price": null,
+        "allocations": [],
+        "payments": []
+      }
+    },
+    {
+      "name": "seed-a0d17-case-28",
+      "config": {
+        "mode": "sale",
+        "supply": "166",
+        "scale": "10000000",
+        "min_price": "20000000",
+        "min_fill": "27"
+      },
+      "max_price": "210000000",
+      "tick_size": "10000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "140000000",
+          "quantity": "24",
+          "excluded": false
+        },
+        {
+          "price": "200000000",
+          "quantity": "7",
+          "excluded": false
+        },
+        {
+          "price": "130000000",
+          "quantity": "34",
+          "excluded": false
+        },
+        {
+          "price": "210000000",
+          "quantity": "10",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "20000000",
+        "allocations": [
+          "24",
+          "7",
+          "34",
+          "10"
+        ],
+        "payments": [
+          "48",
+          "14",
+          "68",
+          "20"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-29",
+      "config": {
+        "mode": "buyback",
+        "supply": "156",
+        "scale": "10000000",
+        "min_price": "20000000",
+        "min_fill": "20"
+      },
+      "max_price": "340000000",
+      "tick_size": "5000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "310000000",
+          "quantity": "1",
+          "excluded": false
+        },
+        {
+          "price": "70000000",
+          "quantity": "35",
+          "excluded": false
+        },
+        {
+          "price": "60000000",
+          "quantity": "4",
+          "excluded": false
+        },
+        {
+          "price": "205000000",
+          "quantity": "19",
+          "excluded": false
+        },
+        {
+          "price": "285000000",
+          "quantity": "5",
+          "excluded": false
+        },
+        {
+          "price": "340000000",
+          "quantity": "26",
+          "excluded": false
+        },
+        {
+          "price": "270000000",
+          "quantity": "1",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "70000000",
+        "allocations": [
+          "0",
+          "18",
+          "4",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        "payments": [
+          "0",
+          "126",
+          "28",
+          "0",
+          "0",
+          "0",
+          "0"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-30",
+      "config": {
+        "mode": "sale",
+        "supply": "101",
+        "scale": "10000000",
+        "min_price": "10000000",
+        "min_fill": "22"
+      },
+      "max_price": "10000000",
+      "tick_size": "10000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "10000000",
+          "quantity": "9",
+          "excluded": false
+        },
+        {
+          "price": "10000000",
+          "quantity": "34",
+          "excluded": false
+        },
+        {
+          "price": "10000000",
+          "quantity": "6",
+          "excluded": false
+        },
+        {
+          "price": "10000000",
+          "quantity": "26",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "10000000",
+        "allocations": [
+          "9",
+          "34",
+          "6",
+          "26"
+        ],
+        "payments": [
+          "9",
+          "34",
+          "6",
+          "26"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-31",
+      "config": {
+        "mode": "buyback",
+        "supply": "129",
+        "scale": "10000000",
+        "min_price": "5000000",
+        "min_fill": "27"
+      },
+      "max_price": "195000000",
+      "tick_size": "10000000",
+      "min_bid": "2",
+      "bids": [],
+      "expected": {
+        "price": null,
+        "allocations": [],
+        "payments": []
+      }
+    },
+    {
+      "name": "seed-a0d17-case-32",
+      "config": {
+        "mode": "sale",
+        "supply": "91",
+        "scale": "10000000",
+        "min_price": "20000000",
+        "min_fill": "16"
+      },
+      "max_price": "340000000",
+      "tick_size": "5000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "70000000",
+          "quantity": "9",
+          "excluded": false
+        },
+        {
+          "price": "60000000",
+          "quantity": "15",
+          "excluded": false
+        },
+        {
+          "price": "265000000",
+          "quantity": "34",
+          "excluded": false
+        },
+        {
+          "price": "245000000",
+          "quantity": "11",
+          "excluded": false
+        },
+        {
+          "price": "240000000",
+          "quantity": "10",
+          "excluded": false
+        },
+        {
+          "price": "125000000",
+          "quantity": "17",
+          "excluded": false
+        },
+        {
+          "price": "105000000",
+          "quantity": "14",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "70000000",
+        "allocations": [
+          "5",
+          "0",
+          "34",
+          "11",
+          "10",
+          "17",
+          "14"
+        ],
+        "payments": [
+          "35",
+          "0",
+          "238",
+          "77",
+          "70",
+          "119",
+          "98"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-33",
+      "config": {
+        "mode": "buyback",
+        "supply": "4",
+        "scale": "10000000",
+        "min_price": "20000000",
+        "min_fill": "2"
+      },
+      "max_price": "20000000",
+      "tick_size": "5000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "20000000",
+          "quantity": "27",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "20",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "3",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "12",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "7",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "11",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "34",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "5",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": null,
+        "allocations": [
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        "payments": [
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-34",
+      "config": {
+        "mode": "sale",
+        "supply": "118",
+        "scale": "10000000",
+        "min_price": "10000000",
+        "min_fill": "3"
+      },
+      "max_price": "200000000",
+      "tick_size": "10000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "30000000",
+          "quantity": "30",
+          "excluded": false
+        },
+        {
+          "price": "120000000",
+          "quantity": "28",
+          "excluded": false
+        },
+        {
+          "price": "170000000",
+          "quantity": "11",
+          "excluded": false
+        },
+        {
+          "price": "10000000",
+          "quantity": "33",
+          "excluded": false
+        },
+        {
+          "price": "90000000",
+          "quantity": "3",
+          "excluded": false
+        },
+        {
+          "price": "150000000",
+          "quantity": "30",
+          "excluded": false
+        },
+        {
+          "price": "30000000",
+          "quantity": "32",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "30000000",
+        "allocations": [
+          "22",
+          "28",
+          "11",
+          "0",
+          "3",
+          "30",
+          "23"
+        ],
+        "payments": [
+          "66",
+          "84",
+          "33",
+          "0",
+          "9",
+          "90",
+          "69"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-35",
+      "config": {
+        "mode": "buyback",
+        "supply": "108",
+        "scale": "10000000",
+        "min_price": "10000000",
+        "min_fill": "25"
+      },
+      "max_price": "650000000",
+      "tick_size": "10000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "30000000",
+          "quantity": "29",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "30000000",
+        "allocations": [
+          "29"
+        ],
+        "payments": [
+          "87"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-36",
+      "config": {
+        "mode": "sale",
+        "supply": "99",
+        "scale": "10000000",
+        "min_price": "5000000",
+        "min_fill": "25"
+      },
+      "max_price": "5000000",
+      "tick_size": "5000000",
+      "min_bid": "2",
+      "bids": [
+        {
+          "price": "5000000",
+          "quantity": "10",
+          "excluded": false
+        },
+        {
+          "price": "5000000",
+          "quantity": "11",
+          "excluded": false
+        },
+        {
+          "price": "5000000",
+          "quantity": "11",
+          "excluded": false
+        },
+        {
+          "price": "5000000",
+          "quantity": "30",
+          "excluded": false
+        },
+        {
+          "price": "5000000",
+          "quantity": "4",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "5000000",
+        "allocations": [
+          "10",
+          "11",
+          "11",
+          "30",
+          "4"
+        ],
+        "payments": [
+          "5",
+          "6",
+          "6",
+          "15",
+          "2"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-37",
+      "config": {
+        "mode": "buyback",
+        "supply": "8",
+        "scale": "10000000",
+        "min_price": "10000000",
+        "min_fill": "1"
+      },
+      "max_price": "105000000",
+      "tick_size": "5000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "90000000",
+          "quantity": "15",
+          "excluded": false
+        },
+        {
+          "price": "45000000",
+          "quantity": "34",
+          "excluded": false
+        },
+        {
+          "price": "95000000",
+          "quantity": "19",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "45000000",
+        "allocations": [
+          "0",
+          "1",
+          "0"
+        ],
+        "payments": [
+          "0",
+          "4",
+          "0"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-38",
+      "config": {
+        "mode": "sale",
+        "supply": "174",
+        "scale": "10000000",
+        "min_price": "5000000",
+        "min_fill": "24"
+      },
+      "max_price": "645000000",
+      "tick_size": "10000000",
+      "min_bid": "2",
+      "bids": [
+        {
+          "price": "45000000",
+          "quantity": "32",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "5000000",
+        "allocations": [
+          "32"
+        ],
+        "payments": [
+          "16"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-39",
+      "config": {
+        "mode": "buyback",
+        "supply": "99",
+        "scale": "10000000",
+        "min_price": "10000000",
+        "min_fill": "14"
+      },
+      "max_price": "10000000",
+      "tick_size": "5000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "10000000",
+          "quantity": "5",
+          "excluded": false
+        },
+        {
+          "price": "10000000",
+          "quantity": "12",
+          "excluded": false
+        },
+        {
+          "price": "10000000",
+          "quantity": "30",
+          "excluded": false
+        },
+        {
+          "price": "10000000",
+          "quantity": "5",
+          "excluded": false
+        },
+        {
+          "price": "10000000",
+          "quantity": "27",
+          "excluded": false
+        },
+        {
+          "price": "10000000",
+          "quantity": "20",
+          "excluded": false
+        },
+        {
+          "price": "10000000",
+          "quantity": "20",
+          "excluded": false
+        },
+        {
+          "price": "10000000",
+          "quantity": "13",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "10000000",
+        "allocations": [
+          "3",
+          "9",
+          "22",
+          "3",
+          "20",
+          "15",
+          "15",
+          "9"
+        ],
+        "payments": [
+          "3",
+          "9",
+          "22",
+          "3",
+          "20",
+          "15",
+          "15",
+          "9"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-40",
+      "config": {
+        "mode": "sale",
+        "supply": "81",
+        "scale": "10000000",
+        "min_price": "10000000",
+        "min_fill": "19"
+      },
+      "max_price": "200000000",
+      "tick_size": "10000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "140000000",
+          "quantity": "15",
+          "excluded": false
+        },
+        {
+          "price": "10000000",
+          "quantity": "24",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "24",
+          "excluded": false
+        },
+        {
+          "price": "190000000",
+          "quantity": "30",
+          "excluded": false
+        },
+        {
+          "price": "160000000",
+          "quantity": "13",
+          "excluded": false
+        },
+        {
+          "price": "50000000",
+          "quantity": "5",
+          "excluded": false
+        },
+        {
+          "price": "180000000",
+          "quantity": "24",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "140000000",
+        "allocations": [
+          "14",
+          "0",
+          "0",
+          "30",
+          "13",
+          "0",
+          "24"
+        ],
+        "payments": [
+          "196",
+          "0",
+          "0",
+          "420",
+          "182",
+          "0",
+          "336"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-41",
+      "config": {
+        "mode": "buyback",
+        "supply": "52",
+        "scale": "10000000",
+        "min_price": "10000000",
+        "min_fill": "10"
+      },
+      "max_price": "650000000",
+      "tick_size": "10000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "560000000",
+          "quantity": "33",
+          "excluded": false
+        },
+        {
+          "price": "360000000",
+          "quantity": "9",
+          "excluded": false
+        },
+        {
+          "price": "360000000",
+          "quantity": "32",
+          "excluded": false
+        },
+        {
+          "price": "420000000",
+          "quantity": "2",
+          "excluded": false
+        },
+        {
+          "price": "500000000",
+          "quantity": "13",
+          "excluded": false
+        },
+        {
+          "price": "530000000",
+          "quantity": "15",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": null,
+        "allocations": [
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        "payments": [
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-42",
+      "config": {
+        "mode": "sale",
+        "supply": "11",
+        "scale": "10000000",
+        "min_price": "5000000",
+        "min_fill": "9"
+      },
+      "max_price": "5000000",
+      "tick_size": "5000000",
+      "min_bid": "2",
+      "bids": [
+        {
+          "price": "5000000",
+          "quantity": "11",
+          "excluded": false
+        },
+        {
+          "price": "5000000",
+          "quantity": "18",
+          "excluded": false
+        },
+        {
+          "price": "5000000",
+          "quantity": "15",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "5000000",
+        "allocations": [
+          "2",
+          "4",
+          "3"
+        ],
+        "payments": [
+          "1",
+          "2",
+          "2"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-43",
+      "config": {
+        "mode": "buyback",
+        "supply": "117",
+        "scale": "10000000",
+        "min_price": "20000000",
+        "min_fill": "13"
+      },
+      "max_price": "210000000",
+      "tick_size": "10000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "170000000",
+          "quantity": "28",
+          "excluded": false
+        },
+        {
+          "price": "90000000",
+          "quantity": "26",
+          "excluded": false
+        },
+        {
+          "price": "40000000",
+          "quantity": "5",
+          "excluded": false
+        },
+        {
+          "price": "150000000",
+          "quantity": "1",
+          "excluded": false
+        },
+        {
+          "price": "150000000",
+          "quantity": "31",
+          "excluded": false
+        },
+        {
+          "price": "180000000",
+          "quantity": "7",
+          "excluded": false
+        },
+        {
+          "price": "50000000",
+          "quantity": "35",
+          "excluded": false
+        },
+        {
+          "price": "50000000",
+          "quantity": "28",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "50000000",
+        "allocations": [
+          "0",
+          "0",
+          "5",
+          "0",
+          "0",
+          "0",
+          "10",
+          "8"
+        ],
+        "payments": [
+          "0",
+          "0",
+          "25",
+          "0",
+          "0",
+          "0",
+          "50",
+          "40"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-44",
+      "config": {
+        "mode": "sale",
+        "supply": "91",
+        "scale": "10000000",
+        "min_price": "5000000",
+        "min_fill": "10"
+      },
+      "max_price": "325000000",
+      "tick_size": "5000000",
+      "min_bid": "2",
+      "bids": [],
+      "expected": {
+        "price": null,
+        "allocations": [],
+        "payments": []
+      }
+    },
+    {
+      "name": "seed-a0d17-case-45",
+      "config": {
+        "mode": "buyback",
+        "supply": "132",
+        "scale": "10000000",
+        "min_price": "20000000",
+        "min_fill": "6"
+      },
+      "max_price": "20000000",
+      "tick_size": "5000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "20000000",
+          "quantity": "23",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "4",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "27",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "30",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "26",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "21",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "22",
+          "excluded": false
+        },
+        {
+          "price": "20000000",
+          "quantity": "14",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "20000000",
+        "allocations": [
+          "9",
+          "1",
+          "10",
+          "11",
+          "10",
+          "8",
+          "8",
+          "5"
+        ],
+        "payments": [
+          "18",
+          "2",
+          "20",
+          "22",
+          "20",
+          "16",
+          "16",
+          "10"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-46",
+      "config": {
+        "mode": "sale",
+        "supply": "122",
+        "scale": "10000000",
+        "min_price": "5000000",
+        "min_fill": "18"
+      },
+      "max_price": "195000000",
+      "tick_size": "10000000",
+      "min_bid": "2",
+      "bids": [
+        {
+          "price": "95000000",
+          "quantity": "35",
+          "excluded": false
+        },
+        {
+          "price": "195000000",
+          "quantity": "13",
+          "excluded": false
+        },
+        {
+          "price": "175000000",
+          "quantity": "18",
+          "excluded": false
+        },
+        {
+          "price": "185000000",
+          "quantity": "15",
+          "excluded": false
+        },
+        {
+          "price": "75000000",
+          "quantity": "27",
+          "excluded": false
+        },
+        {
+          "price": "195000000",
+          "quantity": "15",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": "75000000",
+        "allocations": [
+          "35",
+          "13",
+          "18",
+          "15",
+          "26",
+          "15"
+        ],
+        "payments": [
+          "263",
+          "98",
+          "135",
+          "113",
+          "195",
+          "113"
+        ]
+      }
+    },
+    {
+      "name": "seed-a0d17-case-47",
+      "config": {
+        "mode": "buyback",
+        "supply": "50",
+        "scale": "10000000",
+        "min_price": "10000000",
+        "min_fill": "16"
+      },
+      "max_price": "330000000",
+      "tick_size": "5000000",
+      "min_bid": "1",
+      "bids": [
+        {
+          "price": "80000000",
+          "quantity": "35",
+          "excluded": false
+        },
+        {
+          "price": "305000000",
+          "quantity": "21",
+          "excluded": false
+        },
+        {
+          "price": "325000000",
+          "quantity": "13",
+          "excluded": false
+        },
+        {
+          "price": "205000000",
+          "quantity": "2",
+          "excluded": false
+        },
+        {
+          "price": "15000000",
+          "quantity": "2",
+          "excluded": false
+        },
+        {
+          "price": "55000000",
+          "quantity": "9",
+          "excluded": false
+        },
+        {
+          "price": "190000000",
+          "quantity": "9",
+          "excluded": false
+        }
+      ],
+      "expected": {
+        "price": null,
+        "allocations": [
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ],
+        "payments": [
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0"
+        ]
+      }
+    }
+  ]
+}

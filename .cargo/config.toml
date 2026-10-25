@@ -1,0 +1,5 @@
+[build]
+jobs = 1
+
+[alias]
+wasm = "build --workspace --release --target wasm32v1-none --locked"

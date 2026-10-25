@@ -1,0 +1,26 @@
+name: Bug report
+description: Report a reproducible functional problem. Use SECURITY.md for vulnerabilities.
+body:
+  - type: markdown
+    attributes:
+      value: Do not include keys, recovery secrets, or exploit details. Read SECURITY.md for security reporting.
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Include the smallest input book or operation sequence and exact commands.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Expected and observed behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Source revision, Rust version, command output, and network or local-host details.
+    validations:
+      required: true

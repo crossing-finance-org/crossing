@@ -1,0 +1,27 @@
+__pycache__/
+*.py[cod]
+.venv/
+/target/
+**/test_snapshots/
+.env
+.env.*
+!.env.example
+/.stellar/
+/.soroban/
+*.key
+*.pem
+# Local tool/editor state; never part of the project itself.
+/.agents/
+/.aws/
+/.claude/
+/.codex/
+/.vscode/
+/.idea/
+# Funding proposals and Word documents stay local.
+/docs/archive/
+*.doc
+*.docx
+*.docm
+*.dot
+*.dotx
+*.dotm

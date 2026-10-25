@@ -1,0 +1,28 @@
+[workspace]
+resolver = "2"
+members = ["contracts/common", "contracts/auction", "contracts/auction-factory", "contracts/price-registry", "contracts/oracle-adapter"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+publish = false
+rust-version = "1.94.1"
+license = "Apache-2.0"
+
+[workspace.dependencies]
+soroban-sdk = "=25.3.2"
+crossing-common = { path = "contracts/common" }
+
+[profile.release]
+opt-level = "z"
+overflow-checks = true
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = "symbols"
+
+[profile.dev]
+debug = 0
+
+[profile.test]
+debug = 0

@@ -1,0 +1,100 @@
+{
+  "network": "testnet",
+  "deployed_at": "2026-10-24",
+  "source_version": "0.1.0, post C-19 fix (see docs/security/FINDINGS_AND_FIXES.md)",
+  "previous_deployment": {
+    "deployed_at": "2026-10-23",
+    "note": "Superseded: pinned to the pre-C-19 auction WASM (non-reveal penalty timing bypass). AuctionFactory CABDK6FGCOUH4QSDCLRUBPJ6XHQOYJ6A2INWPSB6U6RV7RJVIYQGW5GY, PriceRegistry CDJX5FBJVMJXQT45YU3MESSBSYTWTNVGDJKHFQPOR5J2N5J6W7JNCYKS, OracleAdapter CBDZMMO5LSG2BJ2ERF3DM2UEXUHLFTX2LNM6IUZ36SXRUGXALYHZ56F5. Left deployed, unused, immutable; its auction template hash cannot be changed."
+  },
+  "wasm_hashes": {
+    "crossing_auction": "e0fe1c94e4ac330ef46eff3c7d4cb7a574c3157a511bfd04fea089299182763d",
+    "crossing_auction_factory": "921ba8ce197bd6b481272b74269621fe477f78250cd1fdb766f7b8f07bfb3d56",
+    "crossing_price_registry": "51d5e477d4afa195e17e248a332d01cb15127d82f82983f8ba7fe97550f1da08",
+    "crossing_oracle_adapter": "10b2a8e3b734751af76647f003d8f11ffdfc7f0fbd27ff273e5ece66c85e4930"
+  },
+  "contracts": {
+    "AuctionFactory": "CDCXXGGYI3JPT4QSOEP2ZRNTDEKDCVZI5QWLTXZEB6DQS66LNQUFEO72",
+    "PriceRegistry": "CAUW5ESYR7DUGINV2BEB3VVJKLKRMSM77LM73L6YSTN427ZH5ARPKVDZ",
+    "OracleAdapter": "CDFIP6XT4RBKQHHOZQ6T3OUMM7AWYNST6IEKPVTLB3RMIV2EOU6RRY6M"
+  },
+  "factory_deploy_salt": "3a876b47c6072eb440e07fb0d897da7b16a01341084ff251992d7a2eae4a31b8",
+  "test_assets": {
+    "CRWA": {
+      "issuer_identity": "crossing-issuer",
+      "sac": "CCHMYGQ27AXDFXFN5A6Z7YW57PZBOCEUUFQU6E6W7HUVGDIFI342LTGU",
+      "flags": [
+        "AUTH_REQUIRED",
+        "AUTH_REVOCABLE"
+      ]
+    },
+    "CUSD": {
+      "issuer_identity": "crossing-quote-admin",
+      "sac": "CBM2XNA2VENVUIBCTTNUBFL5SR7IVLFYMOQNKCHB7KMMOM4GQHUKTFV5",
+      "flags": []
+    }
+  },
+  "identities": {
+    "deployer": "crossing-deployer",
+    "issuer": "crossing-issuer",
+    "quote_admin": "crossing-quote-admin",
+    "users": [
+      "crossing-user-1",
+      "crossing-user-2",
+      "crossing-user-3",
+      "crossing-user-4",
+      "crossing-user-5",
+      "crossing-user-6",
+      "crossing-user-7",
+      "crossing-user-8",
+      "crossing-user-9",
+      "crossing-user-10"
+    ]
+  },
+  "notes": "Redeployed 24 October 2026 after the C-19 fix (non-reveal penalty timing bypass): the auction WASM changed, so the factory/registry (which pin its hash at construction) and the oracle adapter (which pins the registry) all needed a fresh, mutually-verified deployment rather than an upgrade. The OracleAdapter's `base` constructor argument is the quote/settlement asset (here CUSD), matching SEP-40 semantics where `lastprice(OracleAsset::Stellar(rwa))` reports the rwa's price denominated in that fixed base; an initial deploy with base=CRWA was a mistake, left unused and superseded by CDFIP6XT4RBKQHHOZQ6T3OUMM7AWYNST6IEKPVTLB3RMIV2EOU6RRY6M (recorded above). The original asset setup funded each user with 50 whole CRWA and 50 whole CUSD (500,000,000 raw units of each); later auctions change those balances, so current holdings must be queried on-chain. CRWA requires per-holder SAC set_authorized (already granted to all 10 users) and will be needed again for each new Auction escrow instance before funding.",
+  "contract_source_commit": "0eb34001f074ed5d5a5348bfa4c51430452eeeb8",
+  "network_identity": {
+    "passphrase": "Test SDF Network ; September 2015",
+    "network_id_sha256": "cee0302d59844d32bdca915c8203dd44b33fbb7edc19051ea37abedf28ecd472"
+  },
+  "reproduced_build": {
+    "verified_at": "2026-10-25T22:22:49+04:00",
+    "scope": "Clean local reproduction and read-only Testnet WASM comparison; original deployment toolchain was not recorded.",
+    "rustc": "1.94.1 (e408947bf 2026-03-25)",
+    "cargo": "1.94.1 (29ea6fb6a 2026-03-24)",
+    "soroban_sdk": "25.3.2",
+    "target": "wasm32v1-none",
+    "command": "CARGO_NET_OFFLINE=true cargo wasm",
+    "profile": "release as defined in Cargo.toml; no separate stellar CLI optimization",
+    "cargo_lock_sha256": "8d5434eddea78891c6b41a0c17fec61a83fc7bdab4003908024a4bc26f8aab31",
+    "source_inputs_sha256": {
+      "Cargo.toml": "249c41038f0a3da9070bcf56b27d051e53bf3f0e50ba5b372ecdd95636778c45",
+      "Cargo.lock": "8d5434eddea78891c6b41a0c17fec61a83fc7bdab4003908024a4bc26f8aab31",
+      "rust-toolchain.toml": "66d77546735c11e4ad02c4de951902d25ce07835f1e8909f7ed9d8573c254b22",
+      ".cargo/config.toml": "1c9a81c8362131347d714131411b1aedb574aac4e708e95b536ab85f525c3e8b",
+      "contracts/common/Cargo.toml": "5b594a150701296af7e74d9116642266a5b63d311f681b0440ac8a88447f3e16",
+      "contracts/common/src/lib.rs": "2c6330f02c978c1b3043cdea1d87c0dcea3e91928a18bb1b11291f6b0ad0c2f0",
+      "contracts/auction/Cargo.toml": "6f3662c279692761fbc7353046daa3634a7563936ab367506c3ef8ae5e79771e",
+      "contracts/auction/src/lib.rs": "65d5a1db0b56a4bb94af2d65bf8af55d4496ec90b22d9316e2df8648ce0156af",
+      "contracts/auction-factory/Cargo.toml": "a99438be032fafd7ab6f0558c1366ba6835775d41a90ab1fa2faad610dcc0fd2",
+      "contracts/auction-factory/src/lib.rs": "d183bdc33bf20f61085bd11688f7880a01f7da81201bf55541c791ac47f05597",
+      "contracts/price-registry/Cargo.toml": "f809f27ea0eaa333912f04fd6bddf2cbdbba3dbf78d8ab5b77d59173d155db62",
+      "contracts/price-registry/src/lib.rs": "00ea9b9c627d5735a0f98da0d2c0e762d64f50293ea01a1eb36eb34360fee3c9",
+      "contracts/oracle-adapter/Cargo.toml": "bdf87070f2d7c4ffd3b3eca070e97b2095fe0af82c438f07d195a5e50499bc05",
+      "contracts/oracle-adapter/src/lib.rs": "a323420ff93116c4a93f4683ab6369a5ecbf6bd1b10a4bd24fd57dbd99c4f6cf"
+    },
+    "artifact_sizes_bytes": {
+      "crossing_auction": 92325,
+      "crossing_auction_factory": 39854,
+      "crossing_price_registry": 46343,
+      "crossing_oracle_adapter": 21374
+    },
+    "inspection_cli": "stellar 26.0.0 (60f7458e7ecffddf2f2d91dc6d0d2db4fab03ecc)",
+    "original_deployment_cli_version": null
+  },
+  "deployment_transactions": {
+    "auction_wasm_upload": "b33f38c98b181da1e69a0d47d1ed45287c4ebf40fb6b2c43c2bc3d627237fb70",
+    "PriceRegistry": "e06cbd88207e5ce202b96863e603d54c65df52f203dad66a3edb5e92b5b399e1",
+    "AuctionFactory": "278613b366343198f795358f5fe85ba3bf2603816393c9cccad579a987edddc4",
+    "OracleAdapter": "14456f2ac5b4b625f4cad53edae0f98fb928f00e9d13d9bdbce3f3483a981a5d"
+  }
+}

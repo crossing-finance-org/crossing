@@ -1,0 +1,11 @@
+[package]
+name = "crossing-common"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+license.workspace = true
+[dependencies]
+soroban-sdk.workspace = true
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
