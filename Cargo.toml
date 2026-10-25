@@ -10,7 +10,7 @@ rust-version = "1.94.1"
 license = "Apache-2.0"
 
 [workspace.dependencies]
-soroban-sdk = "=25.3.2"
+soroban-sdk = "=29.0.1"
 crossing-common = { path = "contracts/common" }
 
 [profile.release]
