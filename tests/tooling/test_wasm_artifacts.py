@@ -81,7 +81,13 @@ class WasmArtifactTests(unittest.TestCase):
             self.assertEqual((package / name).read_bytes(), (self.directory / name).read_bytes())
         self.assertEqual(json.loads((package / ARTIFACTS.MANIFEST).read_text()), self.manifest)
         self.assertEqual((package / "Cargo.lock").read_bytes(), (ROOT / "Cargo.lock").read_bytes())
-        self.assertEqual(len((package / "SHA256SUMS").read_text().splitlines()), 4)
+        for name in ("LICENSE",):
+            self.assertEqual((package / name).read_bytes(), (ROOT / name).read_bytes())
+        checksums = dict(line.split("  ", 1)[::-1]
+                         for line in (package / "SHA256SUMS").read_text().splitlines())
+        self.assertEqual(set(checksums), {*self.manifest["artifacts"], "LICENSE"})
+        for name, digest in checksums.items():
+            self.assertEqual(digest, ARTIFACTS.sha256(package / name))
 
 
 if __name__ == "__main__":

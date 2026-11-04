@@ -115,7 +115,7 @@ unknown implementation behavior is represented honestly by the gates below.
 
 ## 4. Executable verification
 
-Run from the repository root with Python 3.10+ and Node.js 18+:
+Run from the repository root with Python 3.10+ and Node.js 22 LTS, matching CI:
 
 ```bash
 python3 -m unittest discover -s tests/design -v
@@ -187,8 +187,11 @@ See [testing](../TESTING.md) for measured source coverage and execution boundari
   inventory. Nominal marginal price need not equal an individual delivered ask.
 - **Liveness cost:** someone must pay continuation, expiry, storage and restoration
   fees. The worst-case recomputation bound is finite but potentially expensive.
-- **Delivery option:** a winner can delay or abandon delivery until its deadline;
-  no penalty is imposed, and actual execution may be below allocated volume.
+- **Delivery completion:** any caller may claim to the fixed recipients; the
+  winner has no exclusive right to delay delivery. Without a successful claim,
+  or when asset permission/capacity blocks transfer, an allocation can remain
+  undelivered until expiry and become a refund. Actual execution can therefore
+  be below allocated volume. Revealed delivery expiry has no separate penalty.
 - **Immutability:** no privileged rescue or live upgrade exists. Bugs in eventual
   deployed code cannot be fixed by changing this document.
 

@@ -271,21 +271,20 @@ tests, and 9 tooling tests; execution modes do not count as additional tests.
 
 ## Addendum — 24 October 2026: independent re-audit, penalty timing bypass
 
-A fresh three-agent re-audit (auction/common, the newer test modules, and
-factory/registry/oracle-adapter plus documentation consistency) ran against
-the state above, deliberately not trusting the prior passes' conclusions. It
-confirmed every prior correction still holds and found one new, real issue.
+A separate internal review examined auction/common, newer tests, and
+factory/registry/oracle-adapter plus documentation consistency. It reported one
+new issue. The heading's independence refers to a separate internal pass, not
+an independent external audit or certification.
 
 | ID | Finding | Correction and evidence |
 |---|---|---|
 | C-19 | Medium: the non-reveal penalty could be deterministically bypassed by timing. `resolve()` classified the caller-supplied `expired` flag as `DeliveryExpired` ahead of `NonReveal`, so a sealed bid that never revealed only needed to go unresolved past `delivery_deadline` — forcing resolution through the permissionless `expire_bid`/`expire_range` path instead of `claim_bid` — to receive a full refund with no penalty applied, regardless of who called the resolving entrypoint or why. A rational non-revealing bidder's best strategy was simply to wait; the existing test `nonreveal_penalty_reason_precedence_matches_terminal_refund_policy` and `ARCHITECTURE.md` §6.3 had both already encoded this as intended behavior ("the penalty is not guaranteed to be collected"), which is precisely why an independent re-audit — not reasoning from the existing tests/docs as ground truth — was needed to catch it. | Reclassify so `NonReveal` is checked ahead of the timing-derived `expired` label on any auction that actually `Cleared`: an unrevealed bid is `NonReveal` whether resolved via `claim_bid` before the deadline or `expire_bid`/`expire_range` after it. `Stage::Cancelled` still takes precedence and still refunds in full — an auction that never cleared never had its price distorted by the non-reveal, so there is nothing to deter after the fact. The existing test was updated to assert the corrected precedence (penalty now applies identically whether resolved before or after the deadline); `ARCHITECTURE.md` §6.3 no longer describes the penalty as uncollectible by waiting. Money conservation is unaffected — this changes which `Reason` and refund split apply, not whether `refund + issuer credit == deposit`. |
 
-This is the one finding from this pass that changed production behavior, not
-just documentation or test coverage; every other re-audited area (the
-`store`/`leave` `Config`-parameter refactor, the `fund()` window guard, the
-50% penalty cap, provenance pinning across all three smaller contracts, and
-the "real Ed25519/classic-multisig, not mocked" claims in the cryptographic
-test modules) was independently re-verified and confirmed correct as-is.
+C-19 was the reported behavior-changing defect from this pass. The review also
+examined the Config read refactor, funding window guard, penalty cap, provenance
+pins and real-signature test paths without reporting another defect in those
+cases. These finite checks do not prove all branches correct or replace the
+remaining qualification below.
 
 ## Remaining evidence and scope
 

@@ -3,6 +3,8 @@
 Current source version: `0.1.0`. All contracts are immutable. Constructor
 parameters and the generated WASM specifications determine wire encodings.
 Reviewed **24 October 2026** against [architecture v1.6](../../ARCHITECTURE.md).
+The full-system architecture is now v2.1; this documentation update preserves
+the contract `0.1.0` ABI and the section references used below.
 Amounts/prices use `i128`, bid IDs and work limits `u32`, discovery indexes `u64`,
 and hashes/nonces/salts `BytesN<32>`. Config is immutable after construction.
 

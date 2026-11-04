@@ -157,7 +157,7 @@ specifies the wider application and integration design.
 
 ## Quick start
 
-Install Rust through Rustup, Python 3.10+, and Node.js 18+; CI uses Node 22.
+Install Rust through Rustup, Python 3.10+, and Node.js 22 LTS, matching CI.
 The repository selects Rust **1.94.1** and pins Soroban SDK **25.3.2**.
 
 ```bash
@@ -244,4 +244,15 @@ For implementation details and contribution guidance, start with the
 [documentation index](docs/README.md), [contract API](docs/reference/CONTRACT_API.md),
 and [CONTRIBUTING.md](CONTRIBUTING.md).
 
-Licensed under [Apache-2.0](LICENSE).
+## Open source and maintenance
+
+The [technical architecture](ARCHITECTURE.md) specifies the completed production
+project; the current code is its contract PoC.
+
+The [contribution guide](CONTRIBUTING.md) defines the development workflow and
+submission rights. Architecture [section 25](ARCHITECTURE.md#25-open-source-governance-and-distribution)
+defines governance, licensing and distribution; [section 26](ARCHITECTURE.md#26-maintenance-and-project-continuity)
+defines component upkeep, recovery, supported versions and retirement.
+
+Licensed under [Apache-2.0](LICENSE). Preserve applicable contributor attribution
+and third-party license notices when redistributing the project.

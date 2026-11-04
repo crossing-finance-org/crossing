@@ -269,7 +269,8 @@ separate from local verification; the repository does not deploy contracts.
 
 After all checks pass, CI also uploads `tested-contracts-<commit>` for 14 days:
 the four verified WASMs, `SHA256SUMS`, `test-wasm-manifest.json`, `Cargo.lock`,
-the workspace manifest, and the Rust toolchain file. Local packaging uses
+the workspace manifest, the Rust toolchain file and LICENSE. Checksums
+cover the four WASMs and the project license. Local packaging uses
 `python3 scripts/wasm_artifacts.py package`; it verifies inputs/hashes again
 and writes `<Cargo target directory>/verified-contracts/`.
 

@@ -5,10 +5,17 @@ tests, and review documentation. The [architecture](ARCHITECTURE.md) also specif
 future client/application components. Keep changes scoped to an issue or concrete
 behavior, and discuss contract economic or interface changes before implementation.
 
+The [architecture](ARCHITECTURE.md#25-open-source-governance-and-distribution)
+defines full-project governance and distribution requirements; its
+[maintenance policy](ARCHITECTURE.md#26-maintenance-and-project-continuity)
+defines support and operating requirements. Record significant design decisions
+with their rationale, alternatives, compatibility consequences and review evidence
+in the relevant pull request and owning documentation.
+
 ## Development
 
 Use the pinned toolchain in `rust-toolchain.toml` and the checked-in `Cargo.lock`.
-Install Rustfmt, Clippy, the `wasm32v1-none` target, Python 3.10+, and Node.js 18+.
+Install Rustfmt, Clippy, the `wasm32v1-none` target, Python 3.10+, and Node.js 22 LTS.
 The [README](README.md#quick-start) provides the complete setup, and the
 [testing guide](docs/TESTING.md) defines the per-source-file 95% coverage gate.
 It also requires at least 95% unadjusted raw LLVM line coverage for each deployable
@@ -75,6 +82,11 @@ Follow [SECURITY.md](SECURITY.md) for potential vulnerabilities. Current interna
 reviews are not external audits. The project is licensed under
 [Apache-2.0](LICENSE); a contribution is accepted under that same license by
 default (see [LICENSE](LICENSE) §5), with no separate contributor agreement.
+Contributors retain their copyrights and must have the right to submit the work.
+Identify copied/vendored material, its origin and its license in the pull request.
+Preserve existing attribution and required upstream notices. No mandatory commit
+sign-off is introduced. Architecture sections 25–26 define distribution review
+and source/release upkeep for the completed project.
 
 Use the [documentation ownership map](docs/README.md) when updating behavior,
 operations, or review records. Keep policy details in their owning document and

@@ -17,6 +17,10 @@ amounts below using seven decimals (`10,000,000` raw units per token), and
 recovered entry 100's originally missing hash from ledger 5368459. These are
 evidence corrections; no historical transaction or deployed contract changed.
 
+Balances and contract-state statements below refer to those dated observations,
+not current service health. This record does not re-query the network whenever
+documentation is updated; Testnet resets or archival can affect later access.
+
 ## 1. Redeployment (auction WASM changed by the C-19 fix)
 
 | # | Action | Tx hash |
@@ -274,11 +278,12 @@ A post-hoc balance check (querying each resolved auction escrow's token
 balances directly, expecting zero) found Auction C still holding 20 CUSD:
 user-5's and user-6's refund credits from §6 had been correctly resolved by
 `claim_bid` but never actually withdrawn — only user-7's penalized refund
-and the issuer's credits were withdrawn at the time. The credits were never
-at risk (an unwithdrawn credit just sits as a permanent, owner-only claim —
-this is exactly the D-03/D-15 guarantee from the
+and the issuer's credits were withdrawn at the time. Both missed refunds
+remained recorded as owner-only credits, without a protocol
+forfeiture deadline. Future transfer still depends on backing, authorization and
+retention/restoration — the D-03/D-15 ownership property from the
 [findings report](../docs/security/FINDINGS_AND_FIXES.md#phase-1--original-design-review-first-pass)
-working as intended), but leaving them unclaimed would have been a
+working as intended. Leaving them unwithdrawn would have been a
 misleading way to close out the demonstration.
 
 | # | Action | Tx hash |

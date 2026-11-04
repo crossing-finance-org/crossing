@@ -2,6 +2,13 @@
 
 ## Unreleased — 0.1.0
 
+- Expand the completed-project architecture to v2.1 with the dApp, SDK,
+  indexer/API, keeper operations, governance, licensing, support and maintenance.
+  Specify permissionless-claim authority, Testnet reset isolation and projection
+  completeness. Keep current PoC status separate from
+  full-project requirements. Define governance and decision requirements and include
+  LICENSE with its checksum in verified WASM bundles.
+
 - Split the integration harness into shared support and behavior scenario modules.
   Build and verify test WASMs against current source inputs in Cargo's configured
   target directory, rejecting stale or altered artifacts. Preserve the four
@@ -39,7 +46,7 @@
   contract, cryptographic) with a plain-language explanation of each defect
   and its fix, so a reader does not need to open all four source reports.
 - Fix a Medium-severity timing bypass of the non-reveal penalty found by a
-  fresh, independent three-agent re-audit: `resolve()` now classifies
+  separate internal review: `resolve()` now classifies
   `NonReveal` ahead of the timing-derived `DeliveryExpired` reason on any
   auction that cleared, so the penalty applies identically whether a bid is
   resolved via `claim_bid` before the delivery deadline or `expire_bid`/

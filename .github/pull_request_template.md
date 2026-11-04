@@ -18,3 +18,9 @@ keep implemented scope separate from planned SDK/dApp/services. Measured counts,
 coverage, and resource figures must cite completed local evidence; distinguish
 hosted CI/deployment and external audits from internal review. Link affected
 README, API, operations, and review sections where useful.
+
+Identify external code/assets and their licenses. Preserve attribution and
+required notices, and describe package-content effects when changing release
+tooling. Record significant architecture decisions and their rationale, review
+evidence, maintenance and compatibility consequences in the pull request and
+owning documentation, following architecture sections 25–26.

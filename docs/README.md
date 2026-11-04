@@ -1,7 +1,8 @@
 # Documentation
 
-Current baseline: source `0.1.0`, architecture **v1.6**. Evidence/model review:
-**25 October 2026**; repository structure follow-up: **25 October 2026**.
+Current baseline: contract PoC source `0.1.0`, architecture **v2.1**, updated
+**5 November 2026**. Historical evidence/model reviews retain their original
+October 2026 dates and reviewed architecture versions.
 Four deployable smart contracts and the shared Rust library are implemented.
 
 | Document | Purpose |
@@ -19,15 +20,19 @@ Four deployable smart contracts and the shared Rust library are implemented.
 | [Operations](operations/README.md) | Build identity, deployment sequence, maintenance, and incident response |
 
 The architecture describes the full intended product. Contracts and their local
-demonstration are implemented; client SDK, dApp, indexer, keepers, and curated
-oracle integration are planned. The generated WASM specification and the source
-define current wire types. Resolve inconsistencies through source review and a
+demonstration are implemented; client SDK, dApp, production indexer/API and keepers
+are planned. Section 13 defines the complete application and Stellar integration;
+sections 15 and 23 define delivery dependencies and acceptance criteria. Sections
+25–26 define completed-project governance, licensing, maintenance and continuity. Ramps
+and a curated oracle are optional later integrations. The generated WASM
+specification and the source define current wire types. Resolve inconsistencies through source review and a
 documented compatibility change before release.
 
 Document ownership: the Contract API owns current wire behavior and authorization;
 the architecture owns economic rules and the planned full system; Testing owns
 suite counts, coverage methods, and dated measurements; Operations owns build,
-release, and recovery procedures. Findings and Fixes owns finding status and
+release, and recovery procedures. Architecture sections 25–26 own source/release
+authority, component upkeep, support windows and distribution rights/notices. Findings and Fixes owns contract finding status and
 links to supporting reviews. The deployment manifest owns recorded deployment
 identity, and the transaction log owns dated on-chain activity. README is an
 overview and links to these owners rather than duplicating detailed policy.

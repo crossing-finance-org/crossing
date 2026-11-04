@@ -4,9 +4,13 @@ These runbooks describe the intended full-system operations. The repository
 currently provides a local smart-contract PoC and CI configuration; it contains
 no production addresses, deployment credentials, hosted keeper, or deployment
 automation. Publishing repository changes does not deploy a contract.
-Baseline: source `0.1.0`, [architecture v1.6](../../ARCHITECTURE.md).
+Baseline: contract PoC source `0.1.0`, [architecture v2.1](../../ARCHITECTURE.md).
 The [documentation index](../README.md) tracks review dates and ownership.
 SDK/dApp/keeper procedures describe planned services.
+The completed-system ownership, operating schedule, recovery targets and support
+policy are specified in [architecture section 26](../../ARCHITECTURE.md#26-maintenance-and-project-continuity).
+Release authority and independent review follow
+[section 25](../../ARCHITECTURE.md#25-open-source-governance-and-distribution).
 
 ## Local build identity
 
@@ -23,7 +27,11 @@ The verified build used by these scripts honors Cargo's configured target
 directory. `python3 scripts/wasm_artifacts.py directory` prints the WASM location;
 `verify` checks its recorded source inputs and four artifact hashes. Packaging
 writes the four WASMs, checksums, build manifest, lockfile, workspace manifest,
-and toolchain file to `<Cargo target directory>/verified-contracts/`.
+toolchain and LICENSE to `<Cargo target directory>/verified-contracts/`.
+Checksums cover the four WASMs and the project license. The helper
+does not generate a target-specific dependency license inventory. Follow
+[architecture section 25.2](../../ARCHITECTURE.md#252-license-scope-and-redistribution) for incorporated upstream material before a
+public binary release.
 CI preserves this bundle as `tested-contracts-<commit>` for 14 days after checks
 pass. The build manifest records dirty working trees explicitly; its hashes
 identify local inputs without claiming those edits have been committed or merged.
@@ -160,12 +168,19 @@ does not renew an observation outside the selected range. Funding/publication ca
 require restored provenance; claims on an already funded auction do not call
 factory/registry. Credits have no forfeiture deadline after recovery retention ends.
 
-Before accessing an archived dependency, simulate restoration using the target
-network's supported transaction flow. Restore the original ledger entries and
-their values. Never initialize a missing archived bid/credit/nonce as a new record,
+Before accessing an archived dependency, simulate the intended invocation with
+the target network/provider's supported restoration flow. From Protocol 23,
+simulation can populate an inline restoration list so the original entries are
+restored when the host function runs. If an explicit restoration preamble is
+returned, combined resources exceed limits, or an operator pays separately,
+confirm a separate restoration transaction and then resimulate the original
+action. Preserve the original ledger entries and values.
+[Stellar archival and restoration](https://developers.stellar.org/docs/learn/fundamentals/contract-development/storage/state-archival).
+Never initialize a missing archived bid/credit/nonce as a new record,
 recreate ownership, clear a replay guard, or interpret missing RPC history as an
-empty auction. Rerun the intended operation after restoration and verify the
-result. Actual archive/restore acceptance tests are still an open release gate.
+empty auction. Verify the actual invocation and resulting state. Separate
+restoration does not guarantee the original operation remains within its window.
+Actual archive/restore acceptance tests are still an open release gate.
 An expired local snapshot regression now preserves credits, bid nonces, factory
 metadata, and registry duplicate guards beyond the delivery/recovery horizon.
 It uses the pinned test host's recording-mode automatic restoration; target

@@ -1,21 +1,53 @@
-# Crossing Protocol — Design and Architecture
+# Crossing Protocol Technical Architecture
 
-Version **1.6 — full system architecture** · Contract baseline **0.1.0** · Reviewed **24 October 2026**
+Version **2.1** · Contract PoC baseline **0.1.0** · Updated **5 November 2026**
 
-**Status:** the core Rust/Soroban contracts and executable design models are
-implemented and locally reviewed, and have been deployed to and exercised on
-Stellar Testnet — see
-[deployments/testnet.json](deployments/testnet.json) and the
-[testnet transaction log](deployments/TESTNET_TRANSACTIONS.md). There is no
-Mainnet deployment and no independent external contract audit. This document
-maps the implemented contract baseline and the planned full system. The
-[design audit](docs/security/DESIGN_AUDIT.md) tracks design corrections and
-release gates; the [contract review](docs/security/CONTRACT_REVIEW.md)
-records actual runtime evidence.
+Crossing is an issuer-authorized auction protocol for tokenized real-world
+assets on Stellar. The full implementation combines Soroban escrow and uniform
+price discovery with a wallet-connected dApp, an integration SDK, durable market
+indexing and permissionless operating services. Investors retain signing
+authority; each auction holds its own collateral; application services never
+decide allocations or redirect withdrawals.
 
-Read §§1–5 for the system and lifecycle, §§6–9 for economic/security rules,
-§§10–13 for storage and integrations, and §§17–22 for exact ABI, authorization,
-accounting, failure handling, and release limits. Verification is in §§14 and 23.
+This architecture specifies the completed production project: contracts,
+application, integration interfaces, public data infrastructure, operating
+services and the open-source project's lifecycle. Requirements describe the
+target implementation, including its maintenance and release obligations.
+They are not restricted to the components or operational practices available
+in the current repository.
+
+The production design uses genuine issued Stellar Asset Contracts, fully
+funded Sale/Buyback auctions, Open/Sealed bids, atomic final eligibility checks,
+independent delivery and owned withdrawal credits. Repository implementation
+status is tracked separately below; it does not narrow the target scope.
+
+| Area | Repository baseline | Full implementation |
+|---|---|---|
+| Smart contracts | Four deployable contracts and shared library; local tests and recorded Testnet activity | Reviewed immutable releases, measured capacity, network recovery and resource qualification |
+| dApp and wallet flows | Not implemented | Issuer workspace, investor participation, portfolios, reveal vault and recovery |
+| TypeScript SDK | Independent arithmetic/XDR reference scripts only | Generated bindings, verified deployments, exact amounts and transaction orchestration |
+| Indexer and API | Not implemented | Durable ledger ingestion, public projections, reconciliation, discovery and history |
+| Keeper and retention services | Public contract methods exist; no hosted service | Bounded closing/expiry/publication, fee budgets, TTL monitoring and recovery |
+| Price integration | Raw registry and partial read-only SEP-40 adapter | Clear execution/freshness semantics; curated feed only as a separate later extension |
+
+The checked-in [deployment manifest](deployments/testnet.json) and
+[transaction log](deployments/TESTNET_TRANSACTIONS.md) record Testnet evidence.
+They are historical records, not a live service-health assertion. Mainnet
+qualification and an independent external audit remain release requirements.
+The [Contract API](docs/reference/CONTRACT_API.md) owns exact current wire behavior;
+the architecture defines the full target system. Planned interfaces are marked
+as such and do not imply that application packages already exist.
+
+| Reading path | Sections |
+|---|---|
+| Product, boundaries and lifecycle | [1](#1-product-scope-and-decisions)–[5](#5-state-machine-and-timing) |
+| Bidding, clearing, eligibility and money | [6](#6-open-and-sealed-bids)–[9](#9-settlement-refunds-and-conservation) |
+| Storage, observations and network resources | [10](#10-storage-indexing-events-and-errors)–[12](#12-ttl-restoration-and-resource-engineering) |
+| Complete dApp, SDK, indexer and Stellar integration | [13](#13-full-application-and-stellar-integration) |
+| Verification, implementation sequence and platform references | [14](#14-security-properties-and-verification-gates)–[16](#16-primary-references-and-platform-compatibility) |
+| Exact interfaces, authorization, accounting and failure cases | [17](#17-exact-interface-and-data-requirements)–[22](#22-adversarial-economics-and-release-policy) |
+| Full-system acceptance and reproducible checks | [23](#23-full-system-acceptance-criteria)–[24](#24-implemented-wire-types-and-reproducible-checks) |
+| Open-source governance, licensing and maintenance | [25](#25-open-source-governance-and-distribution)–[26](#26-maintenance-and-project-continuity) |
 
 ## 1. Product, scope, and decisions
 
@@ -30,7 +62,7 @@ Public auction observations are queryable between auctions. They are **not a
 continuously refreshed valuation, independent appraisal, or guarantee of safe
 collateral acceptance**.
 
-### 1.1 Decisions resolving the previous specification
+### 1.1 Core architectural decisions
 
 | Area | Normative decision |
 |---|---|
@@ -60,10 +92,10 @@ cap is still subject to target-network and worst-case validation.
 Implemented PoC: sale, buyback, both bid modes (including an optional, bounded
 non-reveal penalty, §6.3), escrow, clearing, compliance, independent claims,
 refunds, raw price observations, and a read-only, partial SEP-40 adapter over
-those observations (§11.3). Full product scope also includes the client SDK,
-dApp, indexer/API, keeper services, release operations, and a separately
-reviewed curated oracle feed with its own source/manipulation governance (§13).
-These remaining application components are specified here but are not
+those observations (§11.3). The initial full product adds the client SDK, dApp,
+indexer/API, keeper services and release operations (§13). Optional later ramp
+and curated-feed integrations have separate provider, source and governance
+requirements. These application services and optional integrations are not
 implemented in the current PoC.
 
 No AMM, bridge, leverage, continuous book, external-price-based clearing, protocol
@@ -109,7 +141,7 @@ funds. On-chain progress does not require the frontend or a privileged keeper.
 | RWA SAC administrator | Can change authorization and exercise asset-enabled clawback, including against the auction. Crossing cannot override these powers. |
 | Quote SAC administrator | Can freeze or claw back under the asset's rules. Fully funded escrow does not eliminate external issuer risk. |
 | Issuer | Chooses immutable terms, funds inventory/budget, receives earned proceeds. Cannot withdraw reserves or redirect refunds. |
-| Bidder | Can submit funded bids, withhold reveals, and delay delivery until deadline. Cannot replace accepted terms or withdraw early. |
+| Bidder | Can submit funded bids and withhold a reveal. Revealed bids may be claimed by any caller to fixed recipients; the bidder cannot reserve delivery timing. Cannot replace terms or withdraw early. |
 | Keeper/publisher | Pays fees for deterministic progress/publication. Cannot choose price, allocations, or recipients. |
 | Release deployer | Selects reviewed artifacts and addresses. A verified manifest is required; an address alone does not prove correctness. |
 | SDK/RPC/indexer/wallet | Presentation and transaction infrastructure. Contracts verify authorization and terms; users authenticate deployments and signing intent. |
@@ -184,8 +216,8 @@ struct Config {
 Factory, registry, template hash, and protocol domain are constructor-established
 provenance. `config_hash = SHA256(XDR(Config))` uses canonical Soroban contract
 value encoding; verify a Rust/TypeScript golden vector before implementing clients.
-There is only one source of reserve/ceiling values. Remove the old independent
-`limit_price` to prevent conflicting grids.
+There is one source of reserve/ceiling values. The current Config has no separate
+`limit_price` field that could conflict with the grid.
 
 ### 3.3 Validation
 
@@ -278,6 +310,7 @@ unfinished setup. Do not assume undeployed addresses can be preauthorized.
 | Auction `expire()` | Permissionless | Unfunded-start / unfinished-close cancellation |
 | Auction `claim_bid(id)` | Permissionless | Deliver to fixed recipients or credit refunds once |
 | Auction `expire_bid(id)` | Permissionless | Post-deadline refund and reserve release |
+| Auction `expire_range(start_id,count)` | Permissionless | Resolve up to 8 expired bids without transferring tokens |
 | Auction `withdraw(owner,asset,amount)` | Owner | Same-owner credit withdrawal only |
 | Auction `maintain(keys)` | Permissionless | Bounded typed TTL extension |
 | Auction getters | Public | Config, state/cursors, timing flags, bids, totals, credits, liabilities, observations |
@@ -305,7 +338,7 @@ stateDiagram-v2
     Closing --> Sweep: candidate found
     Sweep --> Closing: exclude and restart
     Sweep --> Ready: clean complete sweep
-    Ready --> Closing: atomic check excludes winner
+    Ready --> Closing: atomic check excludes contributor
     Ready --> Cleared: atomic final checks pass
     Closing --> Cancelled: minimum fails or deadline
     Sweep --> Cancelled: close deadline
@@ -540,7 +573,7 @@ subtracted exactly once, and clearing restarted.
 Its deposit remains an owned pending refund. Do not transfer refunds in a sweep.
 
 Returned `false` proves deauthorization. A query error, unexpected type, missing
-or archived dependency, or resource failure grants neither trading permission
+or archived dependency, or resource failure establishes neither trading permission
 nor permission to exclude permanently. Abort that invocation atomically; restore
 and retry where needed. Deadline cancellation remains available. Treating every
 error as a durable revocation would enable accidental permanent bid removal.
@@ -867,251 +900,848 @@ footprints. Invalid work limits never mean unlimited work. No keeper subsidy or
 preferred issuer scheduler is assumed. Deadline refunds bound lockup in protocol
 time, but a fee-paying caller must still submit progress/expiry transactions.
 
-## 13. Client SDK, dApp, indexing, and operations
+## 13. Full application and Stellar integration
 
-This section specifies the full application architecture. These components are
-planned and are not part of the implemented smart-contract PoC. They consume the
-current contract ABI; they do not replace contract validation or control escrow.
+The production application consists of a browser dApp, a public TypeScript SDK,
+an indexer and query API, permissionless keeper workers, and release and asset
+metadata. The contracts in §§1–12 remain the authority for money, eligibility,
+price and ownership. This section defines the completed application and its
+required interfaces. The implementation-status table in the introduction tracks
+which components are present in the repository.
 
-### 13.1 Application topology and ownership
+| Application concern | Detailed design |
+|---|---|
+| Stack, identity, wallets, SDK and transaction lifecycle | §§13.1–13.7 |
+| Asset onboarding and external ramps | §§13.8–13.9 |
+| dApp screens, issuer/investor flows and recovery | §§13.10–13.13 |
+| Indexer, database and public API | §§13.14–13.17 |
+| Keepers, price consumers, operations and scaling | §§13.18–13.22 |
+
+### 13.1 Production topology and technology choices
 
 ```mermaid
 flowchart TB
-    U[Issuer or bidder browser] --> UI[Reference dApp]
-    UI --> SDK[Typed client SDK]
-    SDK --> W[User wallet: local authorization and signing]
-    SDK --> RPC[Stellar RPC: reads, simulation, submission, confirmation]
-    RPC --> C[Factory, Auctions, Registry and SACs]
-    UI --> API[Optional discovery and history API]
-    API --> DB[(Indexed public state)]
-    IDX[Event and state indexer] --> RPC
-    IDX --> DB
-    KEEP[Permissionless keeper with fee account] --> SDK
-    SDK --> M[Verified deployment manifest]
-    UI --> SEC[Local encrypted reveal recovery]
+    INVESTOR[Investor or token holder] --> WEB[React and TypeScript dApp]
+    ISSUER[Issuer operations] --> WEB
+    WEB --> SDK[Crossing TypeScript SDK]
+    WEB --> API[Public query API]
+    WEB --> WALLET[Wallet or institutional signing]
+    WEB --> RECOVERY[Encrypted local reveal recovery]
+    SDK --> RPC[Stellar RPC providers]
+    SDK --> CLASSIC[Classic account and trustline data]
+    SDK --> MANIFEST[Verified release manifest]
+    RPC --> NETWORK[Stellar Core and Soroban execution]
+    NETWORK --> CONTRACTS[Factory and per-auction escrow]
+    CONTRACTS --> SAC[RWA and settlement SACs]
+    NETWORK --> REGISTRY[PriceRegistry and OracleAdapter]
+    INGEST[Ledger ingestion and reconciliation] --> RPC
+    INGEST --> ARCHIVE[Historical ledger source]
+    INGEST --> DB[(PostgreSQL projections)]
+    INGEST --> RAW[(Durable raw ledger archive)]
+    API --> DB
+    KEEPER[Keeper and retention workers] --> SDK
+    ONBOARD[Issuer onboarding service] --> ADMIN[Asset administrator signing]
+    ADMIN --> SAC
+    WEB --> ONBOARD
 ```
 
-The dApp and indexer are availability/convenience layers. User asset authority
-stays with wallets and the contracts. The backend never receives signing keys,
-wallet recovery phrases, unrevealed secrets, or authority to redirect refunds.
-The keeper signs only its own fee-paying transactions for public maintenance
-operations. Transactions requiring issuer/bidder/credit-owner authorization are
-signed through that user's wallet. Direct contract interaction remains possible
-if the hosted interface or indexer is unavailable.
+The reference application uses React and TypeScript with a static Vite build,
+Node.js and TypeScript for the API and workers, PostgreSQL for durable public
+data and jobs, and object storage for raw ledger evidence. Browser and server
+code share the protocol SDK. Runtime and dependency versions are pinned when
+these packages are implemented. API, ingestion and keeper processes have
+separate service identities and database permissions even if deployed together.
 
-### 13.2 SDK packages and numeric domain
+Start with PostgreSQL job leases and a transactional outbox. A separate message
+broker or Redis may be added when measured load justifies it. Neither becomes
+the only durable copy of a transaction attempt, ingestion checkpoint or deadline
+job. Private onboarding records have a separate storage and access boundary.
 
-The intended TypeScript client SDK has the following module boundaries:
+| Component | Owns | Authority boundary |
+|---|---|---|
+| Contracts | Escrow, clearing, delivery, credits and liabilities | No off-chain identity, document or fiat decision |
+| Browser dApp | Input, presentation, wallet interaction and local recovery | No custody or final allocation decision |
+| Public SDK | Exact encoding, verified reads and transaction orchestration | No embedded user signer or server dependency |
+| Indexer and API | Search, public portfolios and durable history | No power to validate or redirect a payout |
+| Keepers | Timely public progress, expiry, publication and retention calls | Fixed outcomes and recipients; fee-account authority only |
+| Issuer onboarding | Verification workflow and requests for asset authorization | Asset administrators remain separate from the trading service |
+| Release operations | Artifact publication, infrastructure and release catalog | No upgrade or seizure of existing escrow |
 
-| Module | Responsibility and constraints |
+### 13.2 Roles of the Stellar stack components
+
+| Stellar component | Crossing integration | Boundary |
+|---|---|---|
+| Stellar Core and SCP | Ordering, application and final ledger state | No custom consensus or dedicated validator is required |
+| Soroban runtime and Rust SDK | WASM execution, authorization, storage and cross-contract calls | Rust SDK and client SDK are independently versioned |
+| Issued assets and SACs | RWA and settlement balances on the same ledger | Genuine seven-decimal issued SACs only |
+| Stellar RPC | Network/state reads, simulation, submission, confirmation and ingestion | Provider health and history retention are monitored |
+| Horizon | Optional classic account, trustline, flag and transaction-history queries | Contract execution and confirmation use RPC |
+| Stellar JavaScript SDK | XDR, StrKey, transactions, RPC and optional Horizon clients | Crossing adds protocol-specific verification and economics |
+| Wallets | Account selection, transaction and authorization signatures | Capabilities are tested per wallet/account type |
+| Stellar CLI | Artifact upload, deployment, inspection and recovery | Operator dependency; no browser requirement |
+| Historical ledger providers | Replay, backfill and audit evidence | Historical data does not restore contract storage |
+| Network configuration | Fees, resource limits, protocol and TTL settings | Local host defaults do not establish production limits |
+
+Use the Stellar JavaScript SDK in browser and Node.js packages. Horizon may
+supply Classic account information; tested RPC ledger reads may replace that
+convenience dependency. [Client SDKs](https://developers.stellar.org/docs/tools/sdks/client-sdks),
+[Horizon](https://developers.stellar.org/docs/data/apis/horizon).
+
+Auction transactions invoke Soroban contracts. Allocation does not create SDEX
+offers, route through liquidity pools or use path payments. A separate swap or
+ramp can help users obtain the quote asset before bidding. Classic trustline
+balances and SAC contract balances represent the same asset without a bridge
+or a second wrapped token. [SAC integration](https://developers.stellar.org/docs/tokens/stellar-asset-contract).
+
+### 13.3 Network identity and asset identity
+
+Every prepared operation, stored record, cache key, subscription and recovery
+bundle includes a network ID. The manifest carries the exact network passphrase
+and its SHA-256 ID. SDK startup compares provider-reported network identity with
+that manifest. An address or symbol alone never establishes a trusted release.
+
+A passphrase/network ID can remain the same after a Testnet reset. Assign an
+off-chain `networkInstanceId` bound to a verified genesis/reset checkpoint.
+Database uniqueness, raw-object paths, job keys, caches and recovery context use
+that concrete instance as well as protocol network identity. In the tables below,
+network-scoped storage means this concrete instance. API network aliases resolve
+to one instance and return its ID; old instances are archived separately. This
+adds no field to the on-chain commitment preimage. Refuse old recovery/signing
+context against a different instance until it has been explicitly reconciled.
+
+An asset descriptor contains network ID, Classic code and issuing account, SAC
+address, decimals, verified executable type, current SAC administrator, issuer
+domain and metadata provenance. Code plus issuing account identifies the Classic
+asset; the current SAC administrator may be different. Derive the expected SAC
+address using the Stellar SDK and compare it with on-chain identity. Asset
+aliases are display values, never equality keys. [Asset identity](https://developers.stellar.org/docs/learn/fundamentals/stellar-data-structures/assets).
+
+Use issuer domain-linked `stellar.toml` metadata where supported. Catalog entries
+record verification time and source. Domain metadata supports identification;
+it does not prove backing, confer trading permission or verify deployed code.
+Refresh administrator and permission information before actionable operations.
+[SEP-1](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0001.md).
+
+Support Classic `G...` and explicitly tested contract `C...` owners. The current
+Soroban `Address` ABI has no muxed-subaccount or memo ownership field: reject an
+`M...` owner instead of silently stripping its subaccount ID. Pooled custodial
+accounts require a separate attribution and signing integration. XLM pays fees
+and rent but is not a supported RWA or quote asset in this release. Account
+activation/reserves, wallet asset balance and auction deposits are distinct.
+
+### 13.4 Wallets and signing authority
+
+A wallet adapter exposes account discovery, network identity, transaction
+signing, authorization-entry signing where supported, account-change events,
+disconnect and capability reporting. Use a maintained integration library and a
+published compatibility matrix. SEP-43 is an interface reference; it does not
+prove every wallet supports every required operation. [Wallet integration](https://developers.stellar.org/docs/tools/developer-tools/wallets),
+[SEP-43](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0043.md).
+
+Distinguish transaction source, fee payer and action authorizer. A relay paying
+fees never acquires the owner's authority. Classic multisig must satisfy account
+thresholds. Contract accounts authorize through their account policy and
+callback rather than an assumed single Ed25519 key. Unsupported signing flows
+fail before deposits are accepted. [Soroban authorization](https://developers.stellar.org/docs/learn/fundamentals/contract-development/authorization).
+
+For direct transactions use source-account authorization where appropriate. An
+authorizing address different from the source needs exact Soroban address
+credentials over the invocation tree, network, nonce and expiration ledger.
+Authorize the complete auction arguments and required transfer subcalls. A login
+signature, supplied address or earlier transaction does not authorize a deposit.
+See §18.1 for the invocation trees.
+
+The initial service supports direct user-paid transactions and keeper-paid
+permissionless calls. A sponsorship relay is an optional later service requiring
+its own method allowlist, quotas, fee ceilings and review. A fee bump preserves
+the signed inner transaction; it does not change its invocation or authorizer.
+Changing source or invocation after signing requires new preparation/signatures.
+[Fee-bump transactions](https://developers.stellar.org/docs/build/guides/transactions/fee-bump-transactions).
+
+Institutional accounts may export XDR for separate signer collection. Track
+partial signatures, expiration and required thresholds without submitting
+incomplete envelopes. Account or network changes invalidate prepared operations
+and lock unlocked reveal material. Test transaction signing, address credentials,
+multisig and contract accounts separately; support for one does not imply the rest.
+
+### 13.5 SDK packages and exact numeric handling
+
+The intended packages are `@crossing/contracts` for generated released bindings
+and `@crossing/sdk` for protocol orchestration. These packages do not yet exist.
+Browser exports must not import database clients, server signers, environment
+secrets or Node-only modules. Workers use server entrypoints over the same core.
+
+| Module | Responsibility |
 |---|---|
-| `deployment` | Validate release manifest, network ID, factory/registry addresses and code hashes; reject mismatches before preparing transactions |
-| `types` / `amounts` | Generated ABI types, typed errors, exact seven-decimal parsing/formatting, bounds and on-grid validation |
-| `factory` | Predict/create/discover auctions, read authority/config/provenance, prepare exact creation authorization |
-| `auction` | Prepare funding, placement, commit/reveal, progress, finalization, claim/expiry, credit withdrawal, maintenance |
-| `commitments` | Canonical ScVal-XDR config/commitment hashing, cryptographic salt/nonce generation, local preimage verification |
-| `recovery` | Versioned encrypted recovery export/import and owner/network/auction/config consistency checks |
-| `registry` | Pair-scoped clearing/execution reads with source time, status, publication time and freshness policy |
-| `transactions` | Simulation, authorization requirements, wallet handoff, submission, confirmation, restore/fee handling, structured retry outcomes |
-| `estimates` | Deterministic open-book indicative clearing with source ledger; no sealed pre-reveal demand estimate |
-| `keeper` | Bounded permissionless progress/publication/expiry/maintenance helpers; no user signing key |
+| `deployments` | Parse manifests, verify network/bindings/executables and retain historical releases |
+| `assets` | Derive SAC identity; read precision, permissions, balance and Classic capacity |
+| `amounts` | Exact parsing/formatting, bounds, grids and checked conversions |
+| `factory` | Predict/create auctions, verify registration and paginate discovery |
+| `auctions` | Read/build funding, bid, reveal, closing, claim, expiry, withdrawal and maintenance calls |
+| `commitments` | Canonical config/commitment XDR, nonce/salt generation and vector conformance |
+| `recovery` | Versioned local encryption, export/import and chain reconciliation |
+| `transactions` | Simulation, authorization/resources, signing, submission journal and confirmation |
+| `registry` | Pair histories, clearing/execution status and source-age calculations |
+| `quotes` | Pure indicative open-book clearing using protocol rounding |
+| `keeper` | Select bounded public work from authoritative stage/cursor/deadlines |
+| `errors` | Stable categories carrying protocol codes, diagnostic context and recovery actions |
 
-All i128 values remain `bigint` in memory and decimal strings across JSON/storage.
-Never use JavaScript `number`, `parseFloat`, floating multiplication, or implicit
-rounding for amounts, prices, deposits, allocation, payments, or liabilities.
-Ledger/bid IDs may use checked bounded integers; discovery `u64` values remain
-BigInt/string. Display formatting must preserve raw units and never feed rounded
-text back into a transaction. Unsigned maxima, negative amounts, extra decimals,
-out-of-grid prices, and scientific notation are rejected by input parsers.
+Generate bindings from exact released WASM specifications. CI detects ABI drift
+and requires a reviewed compatibility change. Preserve tagged optional-record
+encodings, all 22 Config fields and canonical ScVal XDR. Rust field declaration
+order, a JSON object or concatenated integers are not encoding substitutes.
 
-Expected client-facing shapes include:
+Amounts and prices are `bigint`; JSON uses canonical decimal integer strings.
+Ledger/bid IDs use checked u32 values; discovery/history indexes use bigint or
+strings. Reject exponent notation, excessive decimals, negative/overflow values
+and off-grid prices. No amount passes through `Number`, `parseFloat`, binary
+floating arithmetic or a rounded display string.
+
+The SDK separates preparation, signing and execution:
 
 ```typescript
-// Planned SDK interfaces, not an implemented package.
+// Target interface; generated methods preserve the actual contract ABI.
 type PreparedOperation = {
+  operationId: string;
+  releaseId: string;
   networkId: string;
+  networkInstanceId: string;
   contract: string;
   method: string;
-  sourceLedger: number;
-  // Exact ABI/XDR arguments, expected signers, resources, and simulation result.
+  configHash?: string;
+  invocationDigest: string;
+  simulatedLedger: number;
+  validBeforeLedger?: number;
   transactionXdr: string;
-  expectedEffects: Record<string, string>;
+  authorizationEntryXdr: readonly string[];
+  requiredAuthorizers: readonly string[];
+  estimatedFeeStroops: bigint;
+  maximumFeeStroops: bigint;
 };
-type SubmittedOperation =
-  | { status: 'pending'; transactionHash: string }
-  | { status: 'confirmed'; transactionHash: string; ledger: number }
-  | { status: 'failed'; transactionHash: string; error: string }
-  | { status: 'unknown'; transactionHash: string };
+
+type SubmittedOperation<T> =
+  | { status: "pending"; transactionHash: string }
+  | { status: "confirmed"; transactionHash: string; ledger: number; result: T }
+  | { status: "failed"; transactionHash: string; error: CrossingError }
+  | { status: "unknown"; transactionHash: string };
 ```
 
-The package must use the final generated contract specification, verify canonical
-vectors against Rust, and pin its own Stellar dependencies before implementation.
-Names here describe responsibilities, not published packages or compatibility
-claims. Network configuration and deployment addresses cannot be user-controlled
-query-string overrides without explicit verification.
+`CrossingError` is the SDK's structured error type. `operationId` is local
+correlation, not an on-chain replay guard. Return a human-readable signing
+summary alongside preparation. Reveal XDR and results can contain secrets;
+callers explicitly exclude them from logs and telemetry.
 
-### 13.3 Simulation, authorization, submission, and retries
+### 13.6 Transaction preparation and confirmation
 
-1. Read the network manifest, verify on-chain factory/registry bindings, and fetch
-   immutable auction config/provenance plus a recent ledger. Validate the user's
-   wallet network/account and current SAC permissions.
-2. Convert human input to exact units, compute the full potential obligation,
-   inspect trustline/balance capacity, and prepare the exact contract invocation.
-   Show source asset, destination, maximum locked amount, expected signers,
-   deadline, possible fees, and the immutable config being accepted.
-3. Simulate against the selected RPC. Discover and preserve the precise
-   authorization invocation trees, resource footprint, restoration needs, and
-   fee estimate. Simulation is advisory: state can change before inclusion.
-4. Request wallet authorization/signing only for the simulated intended operation.
-   Reject modified invocation arguments, unexpected signers or sub-invocations,
-   and network/config mismatches. A restore or fee-bump operation requires its
-   own disclosed signing intent where the network flow requires it.
-5. Submit once and poll confirmation by transaction hash. A timeout/connection
-   error means unknown status, not definite failure. Reconcile transaction status
-   and contract state before rebuilding/retrying; never replace a sealed nonce
-   or commit secret because an RPC response was lost.
-6. After inclusion, reread bid/state/credits. `Progress`/`Finalization` may report
-   exclusion or cancellation successfully. A completed claim may create a refund
-   credit instead of delivering assets. Update the display from the actual result.
+```mermaid
+sequenceDiagram
+    actor User
+    participant App as dApp and SDK
+    participant Wallet
+    participant RPC as Stellar RPC
+    participant Chain as Stellar network
+    participant Index as Indexer and API
+    User->>App: Choose action and exact amount
+    App->>RPC: Read identity, config, sequence and current state
+    App->>RPC: Simulate invocation and required authorization
+    RPC-->>App: Result, auth, resources, fees and restoration data
+    App-->>User: Show obligation, recipients, deadline and fee ceiling
+    App->>Wallet: Request required signatures
+    Wallet-->>App: Signed entries and envelope
+    App->>App: Verify intent and persist transaction hash
+    App->>RPC: sendTransaction
+    RPC->>Chain: Submit for inclusion
+    App->>RPC: getTransaction by hash
+    RPC-->>App: Included result or pending/unknown state
+    App->>RPC: Reconcile bid, credits and accounting
+    Chain-->>Index: Closed ledger metadata and successful events
+    Index-->>App: Projection watermark reaches inclusion ledger
+```
 
-Use configurable transport backoff and fee ceilings; do not run unbounded
-resubmission loops. Treat protocol errors separately from host, storage, wallet,
-RPC, transaction-expiration, and insufficient-resource errors. Definite false
-SAC authorization is different from an unavailable query. Re-simulate after state,
-ledger, footprint, or sequence changes rather than replaying stale assumptions.
+Authenticate release and wallet, read the latest ledger/sequence, immutable
+config/provenance and action-specific state. Use short transaction time bounds
+and ledger preconditions where supported. Placement, reveal, closing and delivery
+must be included before their exclusive ledger boundary. A countdown cannot
+reserve a place in a ledger.
 
-### 13.4 Sealed-bid secret lifecycle
+Build one contract invocation per Soroban transaction. Simulation provides result,
+footprint, minimum resource fee and authorization entries. Use recording mode to
+discover authorization, then enforce collected credentials where the pinned
+provider/SDK supports it. Assemble resources through supported SDK helpers.
+Resimulation must preserve intended arguments and must not silently replace
+signed authorization entries with newly recorded unsigned entries.
+[Simulation API](https://developers.stellar.org/docs/data/apis/rpc/api-reference/methods/simulateTransaction).
 
-Generate independent 32-byte salts and nonces with a cryptographically secure
-random source. The recovery record includes format version, network ID, auction,
-owner, nonce, config hash, locked amount, price, quantity, salt, and commitment.
-Verify the commitment locally before submission and retain the material before
-broadcasting. Once confirmed, append the actual bid ID and transaction hash.
+Apply a bounded resource margin and explicit fee ceiling. Display inclusion,
+resource, restoration and retention costs separately from the trade deposit.
+Fees and rent use XLM; resource prices and limits are target-network inputs.
+[Fees and metering](https://developers.stellar.org/docs/learn/fundamentals/fees-resource-limits-metering).
 
-The dApp stores an encrypted recovery bundle locally and offers an encrypted
-export. Encryption uses a reviewed authenticated-encryption format and a separate
-user-controlled encryption secret with a reviewed password-derivation policy.
-Do not assume wallet signatures are deterministic or use a public signature as
-an encryption key. Encryption secrets remain in memory for the session, with an
-explicit lock/clear action. Never place preimages in analytics, exception reports,
-URLs, remote logs, or a server database. Browser storage can be deleted; backup
-confirmation is part of commit preparation, not a promise of automatic recovery.
+Verify the signed envelope against the prepared source, network, invocation,
+authorization tree, validity and fee ceiling. Persist its exact hash and attempt
+metadata before broadcasting. Coordinate one in-flight source sequence across
+browser tabs; server signers use durable sequence leases.
 
-On import, check owner, network, auction, config hash, deposit, stored nonce/hash,
-and bid ID against chain state before offering reveal. Reveal is allowed only
-inside the ledger window and requires owner authorization. Losing a secret means
-non-participation and eventual full-deposit credit; neither backend nor issuer
-can recover a hidden bid. Deposit sizes, addresses, timing, and counts remain
-public and can leak information even with correct local encryption.
+Submission acceptance is not execution success. `PENDING` and `DUPLICATE` lead to
+confirmation polling; `TRY_AGAIN_LATER` permits bounded retry of the same envelope;
+`ERROR` requires rejection decoding. Confirmation distinguishes `SUCCESS`, `FAILED`
+and `NOT_FOUND`. A timeout or `NOT_FOUND` does not prove failure.
+[Submission API](https://developers.stellar.org/docs/data/apis/rpc/api-reference/methods/sendTransaction),
+[Confirmation API](https://developers.stellar.org/docs/data/apis/rpc/api-reference/methods/getTransaction).
 
-### 13.5 dApp modules and user flows
+An identical envelope has the same hash. Rebuilding can create another economic
+action. Before rebuilding reconcile all hashes, source sequence, validity and
+protocol state. Identify a sealed commit by owner/nonce/hash, creation by predicted
+address, resolution by bid outcome and publication by immutable record. Open
+placement has no client nonce: never automatically issue a second bid while the
+first is uncertain. Apply the same discipline to withdrawals.
 
-The reference dApp is a TypeScript browser application using the client SDK as its
-single transaction/amount layer. Framework choice and dependency versions are
-implementation decisions; wallet integrations must expose network identity,
-account changes, exact signing intent, and transaction rejection cleanly.
+After inclusion decode the actual return and reread state. Exclusion and
+cancellation may be successful results. A claim can create credit rather than
+deliver assets. Confirm from RPC immediately, then mark API projections as
+catching up until their watermark reaches the inclusion ledger.
+
+### 13.7 Storage restoration and retention integration
+
+Contract archival recovery and historical-query recovery are separate. The
+former restores original ledger entries; the latter replays ledger metadata
+into a database. Neither replaces the other.
+
+On supported networks from Protocol 23, simulation can populate a restore list
+for archived persistent/instance entries and restoration occurs with invocation.
+Include its resources/rent. Use a separate `RestoreFootprint` transaction if an
+explicit restore preamble is returned, combined restoration exceeds limits, or
+an operator deliberately pays separately. After separate restoration confirms,
+resimulate the original action. [State archival](https://developers.stellar.org/docs/learn/fundamentals/contract-development/storage/state-archival).
+
+The compatibility matrix records protocol, RPC/client versions, wallet and tested
+restore flow. Compilation does not prove network/provider compatibility.
+Restoration cannot reopen a bid/reveal window; it can recover an old credit
+subject to asset permissions and solvency.
+
+Monitor shared code, instance, financial keys, SAC contract balances, relevant
+auth state, factory registration, registry observations and pointers independently.
+Use typed maintenance or supported external TTL operations as appropriate.
+Adapter maintenance does not renew the registry; factory maintenance does not
+renew all auctions. Reads and simulations do not purchase on-chain retention.
+
+### 13.8 Issuer and asset onboarding
+
+The initial product accepts existing issued RWAs. Auction creation does not
+create a legal instrument. Onboarding records asset identity, economic unit,
+descriptive documents, transfer restrictions, investor/jurisdiction policy,
+settlement asset and responsible administrators. Sensitive verification documents
+stay with the issuer/provider in a private system; public pages expose approved
+metadata and document references only.
+
+1. Establish Classic issuance/distribution and asset controls through the issuer's
+   process, and deploy the SAC if absent.
+2. Verify Classic-to-SAC identity, precision, both asset administrators and the
+   current RWA admin that will create/fund auctions.
+3. Ensure the configured issuer can supply inventory/budget. The current ABI has
+   no separate treasury funding address. A Classic issuing account issues its
+   own asset when transferring it out; the issuer's external issuance/backing
+   policy remains necessary, and buybacks to that account burn the returned asset.
+4. Complete investor verification and request both relevant asset authorizations.
+   Classic investors may need trustlines and account reserves. Contract holders
+   use SAC-managed balances/permissions rather than Classic trustlines.
+5. Create the dormant auction, authorize its address on both assets, validate any
+   recipient and fund before start.
+6. Exercise the actual signing/account model through a complete Testnet pilot
+   before supporting valuable inventory.
+
+The quote issuer is a separate dependency. The RWA administrator cannot promise
+permission on an unrelated restricted quote asset. Confirm quote-escrow policy
+before scheduling. Asset-admin signing infrastructure is separate from trading
+API and keeper credentials.
+
+Verification status is advisory application data. SAC checks at admission,
+finalization and delivery enforce trading permission. A previous approval does
+not guarantee later delivery or off-chain legal validity. Verification expiry
+may cause the asset administrator to change permissions; the application must
+show the resulting restriction and preserve any owned credit.
+
+Optional provider integrations use SEP-10 for Classic web sessions and SEP-12
+for customer-data exchange. Contract-account login needs a compatible mechanism
+such as draft SEP-45 and an explicitly tested provider. Web login never replaces
+contract authorization. [SEP-10](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0010.md),
+[SEP-12](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0012.md),
+[SEP-45](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0045.md).
+
+Public market reads require no login. Private onboarding, saved preferences and
+opt-in notifications require authenticated sessions. Challenges are domain-bound,
+expiring and single use; session keys and asset-admin keys are isolated.
+
+### 13.9 Settlement asset funding and external ramps
+
+Sale bidders need the exact quote asset; Buyback bidders need the exact RWA.
+Both need a fee-paying path. Read actual on-chain balances and transfer capacity;
+a bank-transfer request or ramp receipt is not auction collateral.
+
+If integrated, discover the anchor from verified metadata and use its supported
+SEP-24 hosted deposit/withdrawal flow. Keep anchor transaction IDs separate from
+Stellar hashes and auction bid IDs. Enable bidding only after the configured
+asset reaches the wallet. [SEP-24](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0024.md).
+
+An off-ramp begins after credit withdrawal to the owner's wallet, followed by a
+separate anchor payment under its instructions. Auction `withdraw` is not a bank
+withdrawal and has no memo/redirect field. It cannot directly attribute payment
+to a pooled anchor account requiring a memo. Anchor availability, bank settlement
+and additional verification never extend auction deadlines. Currency conversion
+and cross-border payment protocols are outside the initial trading release.
+
+### 13.10 dApp structure and data state
+
+Separate issuer operations, investor participation, owned positions, observations
+and recovery. Routes identify network/release/auction. The SDK owns amounts,
+commitments, math and transaction construction; UI components do not duplicate it.
+
+Maintain three state domains: authenticated immutable config/provenance,
+refreshable chain/query observations carrying source ledgers, and local private
+secrets. Cache by network/contract. Account changes invalidate positions and
+prepared operations; network changes invalidate all chain caches. No URL, API
+response or remote metadata silently overrides the trusted deployment catalog.
 
 | View | Required behavior |
 |---|---|
-| Discovery | Filter by ordered asset pair, issuer, Sale/Buyback, open/sealed mode and persisted/time-derived phase; show deployment identity and source-ledger lag |
-| Issuer creation | Verify current RWA admin; choose immutable terms, recipient, grid/caps and ledger deadlines; simulate creation; present predicted escrow address |
-| Issuer funding | Distinguish created from funded; authorize escrow on both SACs through the appropriate asset admins; verify recipient and balances before exact funding |
-| Open bidding | Show public per-tick totals and an indicative clearing calculation with source ledger; show full deposit and remaining capacity before signing |
-| Sealed bidding | Show public metadata and secret backup status; lock maximum obligation; identify reveal window and imported/recovered commitments |
-| Closing | Show persisted stage, cursor, epoch, deadlines and pending work; let anyone submit bounded advance/finalize and explain restart/exclusion outcomes |
-| Portfolio | List owned deposits, reveal status, actual allocation/delivery, refunds credited, available withdrawals and prior withdrawals separately |
-| Price history | Show pair, immutable clearing price, source ledger/time, allocated volume, actual execution and publication time; retain zero-execution records |
-| Recovery | Import encrypted reveal material, reconnect a wallet, reconcile uncertain transactions, restore archived records, retry frozen credits after authorization recovery |
+| Directory | Pair/issuer/mode/phase filters, funding status, source lag, capacity and release identity |
+| Auction detail | Immutable terms, grid/windows, permissions, inventory/budget and public book |
+| Issuer workspace | Config preview, current admin, escrow/recipient readiness and workload estimate |
+| Participation | Exact obligation, balance/capacity checks, wallet capability, signing and confirmation |
+| Sealed bid vault | Commit/reveal state, backup status and encrypted import/export |
+| Closing console | Persisted stage, epoch/cursor, deadlines and public bounded-work actions |
+| Portfolio | Deposits, allocation, delivery, credits, proceeds and withdrawals separately |
+| Pair history | Source price/volume, actual execution, publication and raw-feed status |
+| Recovery | Unknown attempts, archived entries, frozen credit and historical-release access |
 
-Use issuer/funding/bid/claim operation states: idle, validating, simulating,
-awaiting wallet, submitting, pending, confirmed, failed, and status unknown.
-A transaction hash alone is not success. User/account/network switches invalidate
-prepared operations and clear unlocked secret material. Quote-token names are
-untrusted display metadata; always show verified addresses/network alongside
-symbols. No frontend control can change an auction's recipients or refund owner.
+Actions follow idle, validating, simulating, awaiting signature, submitting,
+pending and confirmed states, with separate failed and unknown outcomes. Retain
+hash and signing summary across reload. A confirmed credit offers withdrawal;
+it is not displayed as an already transferred refund.
 
-Time labels use ledger sequence as authority. Wall-clock countdowns are estimates.
-The UI must not promise uninterrupted liquidity, guaranteed budget exhaustion,
-automatic background refunds, recoverable lost salts, or safe collateral pricing.
-Explain integer dust, minimum-fill cancellation, post-clear compliance refunds,
-asset-wide freezing/clawback, recipient burns, and the 16-slot cap when relevant
-to the user's action. Missing indexer data is not a zero balance or empty book.
+Render contract/issuer metadata as untrusted text. Sanitize links, isolate external
+onboarding windows, enforce a restrictive content security policy and minimize
+third-party scripts on secret-bearing screens. Do not place session credentials
+or unlocked preimages in global persistence or analytics. Provide accessible
+labels/keyboard controls and exact raw-unit details. Ledger boundaries are
+authoritative; wall-clock countdowns are estimates.
 
-### 13.6 Public indexer and discovery API
+Server-side metadata and issuer-document retrieval runs through an isolated
+fetcher with restricted outbound access. Accept HTTPS only, validate resolved
+IPv4/IPv6 destinations, block loopback/private/link-local and metadata-service
+addresses, connect only to the validated addresses while preserving TLS hostname
+verification, and disable redirects or revalidate each destination. Do not allow
+a second unvalidated DNS resolution to bypass the check. Bound response size/time
+and rate, and never forward service credentials.
+Approved onboarding/ramp origins are configured independently of arbitrary
+issuer metadata; embedded windows cannot replace the dApp's trusted signing
+origin. [SSRF prevention](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html).
 
-A future stateless API serves indexed public data backed by a durable relational
-store. Index immutable auction/config/provenance, open/revealed bids, resolutions,
-credits, raw observations, execution summaries, and source transaction references.
-Use `(network_id, transaction_hash, event_index)` as the event uniqueness key,
-with source ledger and contract address on every record. Store i128/u64 values as
-lossless decimal data; use ordered-pair and issuer indexes for discovery.
+### 13.11 Issuer creation and funding flow
 
-Persist a ledger/event cursor only after its transaction's records commit. Replays
-are idempotent. Decode by verified contract version/hash, reconcile events with
-one-record contract getters, and track ingestion lag and missing-ledger gaps.
-Retain backfill sources before an RPC's history window expires. Restart/backfill
-must not reset confirmed financial state or manufacture fresh source timestamps.
-Factory/registry pagination uses IDs/addresses; fetch details in bounded calls.
+Select mode, bid mode, exact pair, inventory/budget, quantity/deposit minima,
+grid, caps, recipient, penalty and ledger schedule after release/admin checks.
+Validate the full Config and simulate creation. Preview units, potential closing
+work, supported rent horizon, recipient burn behavior and required asset admins.
+Translate calendar scheduling to ledger estimates using recent cadence, then
+require acceptance of the actual ledger boundaries.
 
-The read API exposes auction search/details, public book data, account positions,
-and pair price history with source-ledger/ingestion metadata and pagination.
-Never accept keys, secrets, unsigned arbitrary custodial actions, or callback URLs
-that become trusted deployment inputs. HTTP caches must key by network and
-contract/pair and show staleness. Indexer failure disables enhanced discovery,
-not direct SDK/RPC interaction or escrow settlement.
+The production SDK/dApp rejects closing windows below the release's measured
+workload policy. The PoC checks ordering but does not enforce this additional
+minimum duration. An on-chain version of the rule requires a new release.
+Disclose typical and adversarial workload assumptions and fee policy.
 
-### 13.7 Keeper and scheduled operation services
+Retain the user salt, predict address, submit creation and verify registration.
+Creation moves no tokens. Track RWA escrow authorization, quote authorization
+and recipient readiness separately, then simulate/sign exact funding. Missing
+start leaves unfunded expiry; there is no late activation. After funding there
+is no discretionary term edit or cancellation. Show earned issuer credits
+separately from still-reserved inventory or budget.
 
-A keeper polls eligible auctions and submits bounded `advance`, `finalize`,
-`expire`, `expire_range`, TTL maintenance, and registry publication. Its queue key
-includes network, auction, operation, and observed epoch/cursor. Before each
-submission it rereads state, simulates, enforces a fee ceiling, and reconciles an
-unknown transaction status. Competing keepers are expected; stale/replayed work
-must not be treated as authority to alter outcomes.
+### 13.12 Investor participation and reveal recovery
 
-Keepers never place/reveal bids, fund auctions, or withdraw owner credits without
-that owner's explicit signed invocation. Fee accounts hold operational XLM only.
-Rate-limit repeated failures, separate dependency outages from definite revocation,
-and alert before close/delivery/TTL deadlines. There is no keeper guarantee in the
-current PoC; users can submit the permissionless operations themselves.
+Open bidding shows public quantities and an indicative result with source ledger.
+Verify permissions, full deposit at the limit, remaining capacity and wallet
+support before signing. Only inclusion consumes a slot; preflight cannot reserve
+one. Current bids cannot be replaced or withdrawn.
 
-### 13.8 Price consumers and curated oracle boundary
+For sealed bidding generate independent random 32-byte nonce and salt locally.
+Build/verify canonical commitment and retain recovery material before submission.
+The network sees address, collateral, timing and hash, which can leak economic
+information; the preimage remains hidden until reveal.
 
-A future adapter reads verified raw clearing and actual-execution records and
-applies independently governed pair/source eligibility, minimum executed volume,
-source-time age, quote/depeg policy, concentration/manipulation controls, decimal
-normalization, and explicit unavailable/stale responses. Define consumer-facing
-precision, timestamp semantics and any SEP-40 conformance before implementing it.
-An internal registry getter is not a claim of SEP-40 compatibility.
+A single-bid recovery payload contains network ID, network instance, release/
+ABI identity, auction, owner, config hash, nonce, deposit, price, quantity, salt
+and commitment. Append bid ID/hash after confirmation without replacing the
+original preimage. Amounts remain decimal strings.
 
-Lending/vault integrations must define their own collateral rules and fallback
-behavior. Related bidders can create misleading auction prices; successful SAC
-transfers are not proof of fair value. Publication retry time never refreshes the
-auction's economic source time. No missing/failing adapter may block auction
-claims or credit withdrawals.
+The version-1 encrypted envelope uses a fixed, published profile:
 
-### 13.9 Operations, release identity, and recovery
+| Parameter | Version-1 requirement |
+|---|---|
+| Password KDF | Argon2id version 0x13, 65,536 KiB memory, three passes, four lanes, 32-byte output |
+| KDF salt | Fresh random 16 bytes per encryption; distinct from the bid's secret salt |
+| Encryption | AES-256-GCM with a fresh random 12-byte IV and 128-bit authentication tag |
+| Password encoding | UTF-8 as entered; no implicit trimming, case folding or Unicode normalization |
+| Context binding | Authenticated format/profile version, network and instance, release, auction, owner and config hash |
+| Import bounds | At most 64 KiB per single-bid envelope; exact supported profile, lengths and fields checked before KDF execution |
 
-Release manifests bind network passphrase/ID, source revision, locked toolchain,
-artifact hashes, constructor arguments, factory/registry addresses, deployment
-transactions and reviewed cap/limits. Verify the manifest against actual deployed
-executables in SDK and dApp. A new immutable release uses new addresses; retain
-old manifests and permit users to resolve/withdraw from old instances. No proxy
-migration moves existing escrow or silently changes live auction terms.
+This selects RFC 9106's second Argon2id profile for a browser memory budget;
+AES-GCM uses the WebCrypto authenticated-encryption interface. The profile is a
+target client specification, not an implemented or independently reviewed vault.
+[RFC 9106 §4](https://www.rfc-editor.org/rfc/rfc9106.html#section-4),
+[WebCrypto AES-GCM](https://www.w3.org/TR/2017/REC-WebCryptoAPI-20170126/#aes-gcm).
 
-Runbooks cover build identity, mutually pinned deployment order, SAC authorization
-before funding, domain-vector verification, permissionless closing/expiry, TTL
-monitoring, restoration, frozen-credit recovery, deficits, and publication retries.
-Observe RPC lag, failed simulations, near-deadline work, restore needs, per-asset
-liability deficits and indexed/chain state discrepancies. Logs include network,
-contract, method, transaction hash, ledger and error class; redact wallet/reveal
-secrets. Monitor service liveness separately from chain financial correctness.
+Encode authenticated context as the UTF-8 JSON array of strings in this exact
+order: format version, profile ID, network ID, network instance ID, release ID,
+auction address, owner address, config hash. Use canonical lowercase hex for
+hashes and canonical StrKey addresses. Payload/header encodings and byte-level
+vectors ship with the SDK. Reject unknown or duplicate fields, malformed lengths,
+unsupported versions and altered context. Do not accept file-controlled KDF
+costs, silent weak-profile fallback or unauthenticated plaintext on failure.
+Run derivation in a worker and qualify the fixed profile on supported devices;
+unsupported devices cannot commit without a supported recovery path. Changing
+parameters requires an explicit new profile and compatibility tests.
 
-Incident response can stop a hosted UI/keeper from starting new work and publish
-accurate affected release information. It cannot pause immutable escrow, confiscate
-credits, redirect refunds, or guarantee asset-admin cooperation. Restore original
-stored values and preserve audit/replay history. Validate backups and failover on
-testnet before valuable inventory. Operational authority is not a custody key.
+The encryption password is separate from wallet recovery phrases and never
+leaves the browser. Public wallet signatures are not encryption keys. Store
+ciphertext in IndexedDB, support encrypted export and require backup confirmation
+before commit. Import checks commitment and owner/nonce/deposit/config/bid against
+chain. Encryption protects stored data; frontend supply-chain controls and session
+locking protect access while the vault is unlocked.
+
+An authorized user reveal must land within the ledger window. Notifications can
+remind without receiving secrets. Keepers have no reveal authority. Lost secrets
+prevent that bid from entering clearing; eventual credit follows the configured
+non-reveal penalty policy, with waiver on cancellation. Exclude unrevealed
+preimages and pre-broadcast reveal payloads from analytics, exceptions, URLs,
+remote storage and diagnostics. After inclusion, reveal terms and salt are
+public transaction data and are necessarily present in raw ledger archives.
+Unrevealed recovery material remains local.
+
+### 13.13 Claims and portfolio semantics
+
+Identify a position by network/auction/bid ID and distinguish deposited,
+allocated, resolved and withdrawn. Allocation does not establish delivery. Sale
+delivery creates bidder quote-surplus and issuer earned-quote credits. Buyback
+pays the seller directly and may create RWA surplus credit. Refund resolution
+creates original-asset credit that still needs withdrawal.
+
+Before delivery expiry, simulate `claim_bid` and inspect its actual result.
+Anyone can submit claims to fixed recipients. The initial hosted keeper policy
+handles post-deadline expiry automatically; pre-deadline claims are user-initiated.
+Other public callers can still claim sooner. A definite revocation may therefore
+irreversibly resolve a bid into refund even if its permissions could later return.
+
+After delivery expiry offer refund resolution, not delivery. Allow partial
+credit withdrawal to accommodate capacity and always pay the same owner. Distinguish
+permission, capacity, archival and solvency failures while preserving positions.
+An empty or stale API response does not prove a zero balance.
+
+Include historical supported releases. On API failure users can enter a verified
+auction and query owner bid-ID pagination and credits through RPC. Export public
+transaction references for recovery; the service cannot recover a lost secret.
+
+### 13.14 Indexer requirement and trust boundary
+
+The full product includes a durable indexer for cross-auction search, portfolios,
+historical prices, exports and operational scheduling. The bounded contract
+getters do not offer unbounded account-wide market search. Rescanning every
+factory and bid at each page load is unsuitable for the production query path.
+
+Indexing is an application requirement, not a settlement dependency. A known
+auction remains usable through SDK/RPC during database/API failure. Authenticate
+network, release and factory catalog; verify created children and template/config
+pins before treating their events as trusted. Keep unknown events for diagnosis
+without listing unregistered contracts as authentic markets. Aggregation across
+releases preserves the provenance of every source.
+
+### 13.15 Ledger ingestion and historical replay
+
+A `LedgerSource` abstraction returns ordered closed ledgers, header/hash,
+transaction envelopes/results and metadata. Production ingestion reads
+`getLedgers` from a compatible provider and durably retains raw XDR in object
+storage. Decode successful contract events and relevant state changes from ledger
+metadata. `getEvents` can provide update hints and a simpler development adapter;
+it does not replace durable replay. [Ledger API](https://developers.stellar.org/docs/data/apis/rpc/api-reference/methods/getLedgers).
+
+Process complete ledgers in transaction/event order. Within one database
+transaction insert evidence, apply projections, enqueue outbox jobs and advance
+the committed watermark. Raw objects are keyed by network/ledger/hash and
+checksum-verified before being referenced. A crash may leave an unreferenced
+object, but never a committed cursor without its projection. Replays are idempotent.
+
+A child created in one transaction may receive calls later in the same ledger.
+Full-ledger decoding discovers and processes it in order. A filtered event
+adapter registers new child filters and backfills inclusively from creation
+before marking discovery complete. Shard filters within provider limits, retain
+per-shard checkpoints and expose completeness through the minimum watermark.
+
+Normalize network, ledger/hash, transaction hash/index, operation/event index,
+emitter, topics/data XDR and decoder version. Normalize the event index to a
+transaction-wide ordinal so events from separate operations cannot collide.
+Retain provider event IDs and map RPC/meta events to one canonical identity. Only successful committed events
+update projections; diagnostics, simulations and rolled-back invocations do not.
+[Event API](https://developers.stellar.org/docs/data/apis/rpc/api-reference/methods/getEvents).
+
+RPC history is bounded and provider-configured. Monitor oldest/latest available
+ledgers and alert before ingestion falls behind retention. Deep replay uses a
+historical ledger source or data-lake-enabled provider. Historical `getLedgers`
+does not imply equally historical `getEvents` or `getTransaction`. Factory/state
+scans can recover current positions but cannot reconstruct every historical
+withdrawal or event. [Historical ledger access](https://stellar.org/blog/developers/rpc-now-with-infinite-scroll).
+
+An applied closed ledger is the confirmation boundary; no proof-of-work-style
+confirmation count is required. Quarantine provider disagreements over a closed
+ledger hash, verify network identity and compare independent trusted sources.
+Never merge conflicting histories or reset financial projections silently.
+[Stellar consensus](https://developers.stellar.org/docs/learn/fundamentals/stellar-consensus-protocol).
+
+### 13.16 Database and reconciliation model
+
+Use PostgreSQL `NUMERIC(39,0)` with signed-i128 checks for monetary values,
+`NUMERIC(20,0)` with u64 checks for discovery/history indexes, and `BIGINT` columns
+with checks for `0..4294967295` for u32 IDs/ledgers. JSON emits strings for large
+integers. Scope all identities by network and release where applicable. Validate address/hash
+format and foreign-key relationships during ingestion.
+
+| Table or projection | Identity | Main contents |
+|---|---|---|
+| `networks`, `releases` | Network; network/release | Network identity, WASM/ABI hashes, bindings, deployment ledgers and limits |
+| `assets` | Network/SAC | Classic identity, precision, metadata and observed admin/controls |
+| `ledgers` | Network/sequence | Header/predecessor hashes, time, raw-object checksum and processing state |
+| `transactions`, `events` | Network/hash; network/hash/event index | Envelope/result/meta references, topics/data, order and decoder version |
+| `auctions` | Network/auction | Registration, config/hash, provenance and creation/funding references |
+| `auction_state_snapshots` | Network/auction/observed ledger/observation ID | Stage, epoch/cursors, accounting, source and completeness |
+| `bids` | Network/auction/bid ID | Owner/deposit, commitment/nonce, revealed terms, exclusion and resolution |
+| `owner_positions`, `credits` | Network/owner/auction[/asset] | Position status, observed credit and cumulative withdrawals |
+| `clearings`, `executions` | Network/registry/auction | Immutable allocation result and separate final delivery totals |
+| `ingestion_checkpoints` | Network/source/partition | Complete ledger/cursor, known gaps and decoder version |
+| `jobs`, `transaction_attempts`, `outbox` | Job, attempt and outbox IDs | Lease, deduplication key, intent, sequence, hashes and retry state |
+
+Decode the event ABI in the API reference. PoC bid/commit events omit owner and
+complete credit deltas: fetch bid/config/accounting/credit getters where needed.
+Do not infer owner from transaction source. `completed` may precede the final
+`delivered` event in one invocation; apply its complete successful result before
+presenting final state.
+
+Reconcile transitions and periodically reconcile active escrows: registration/
+config, bid/owner counts, active ticks, resolutions, credits, accounting equations,
+actual SAC balances, registry records and source order. The bounded issuer/bidder
+set permits credit enumeration. Donations, authorization changes and clawbacks
+can occur without Crossing events, requiring underlying asset/state monitoring.
+
+Snapshots record actual observation ledgers. Separate RPC reads are not an
+atomic historical snapshot. Use transaction metadata for exact historical deltas;
+for current reads detect changes, retry or expose an observation range. Never
+attach a later getter value to an earlier event as historical fact.
+
+On mismatch mark projections degraded, retain evidence and alert. Correct through
+replay/reconciliation, never by changing contract ownership. Test schema/decoder
+changes against raw fixtures and shadow projections before cutover. Back up both
+PostgreSQL and raw evidence and exercise restore/replay drills.
+
+### 13.17 Public API and update delivery
+
+Version the read API under `/v1` and require network identity. Use opaque
+pagination cursors bound to filters/network and a snapshot watermark; enforce
+page limits, rate limits and timeouts.
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /v1/networks/{network}/releases` | Supported deployments, ABI identity and catalog version |
+| `GET /v1/networks/{network}/assets` | Verified descriptors and pair discovery |
+| `GET /v1/networks/{network}/auctions` | Pair, issuer, release, mode and phase filters |
+| `GET /v1/networks/{network}/auctions/{auction}` | Config/provenance, state, accounting and deadlines |
+| `GET /v1/networks/{network}/auctions/{auction}/bids` | Public bid/commit records and revealed terms |
+| `GET /v1/networks/{network}/accounts/{owner}/positions` | Cross-auction public positions |
+| `GET /v1/networks/{network}/accounts/{owner}/credits` | Observed credits and withdrawal history |
+| `GET /v1/networks/{network}/pairs/{rwa}/{quote}/observations` | Clearing/execution history with registry/release provenance |
+| `GET /v1/networks/{network}/transactions/{hash}` | Indexed inclusion/result |
+| `GET /v1/networks/{network}/status` | Chain tip, ingestion watermark, gaps and source health |
+
+Responses carry `networkId`, `networkInstanceId`, `indexedThroughLedger`,
+`reconciledThroughLedger`, `observedAtLedger` where applicable, `chainTipLedger`,
+`completeThroughLedger`, source time and `degraded` status. `indexedThroughLedger`
+means raw ledger/event processing is complete. `reconciledThroughLedger` is the
+last fully verified projection boundary; `completeThroughLedger` cannot exceed
+either watermark or cross a known gap. Current getter observations carry their
+own ledger/range and do not manufacture a historical reconciliation boundary. Label current observations separately from historical snapshots. An
+unindexed address/hash is incomplete knowledge, not proof of nonexistence.
+Unsupported decoders return a version error rather than guessed values.
+
+Start with polling, ETags and bounded backoff. Optional SSE delivers invalidation
+hints with identifiers/watermarks rather than authoritative balance deltas.
+Clients reconnect from cursors and reread; missed hints cannot lose property.
+Cache by network/release/resource and refresh effective phases as ledgers advance.
+
+There is no generic server endpoint signing arbitrary user XDR. Any future HTTP
+preparation endpoint remains subject to browser SDK verification. Private
+onboarding and notification APIs have separate authentication and data roles.
+
+### 13.18 Keeper scheduling and service policy
+
+Run independently restartable workers with durable jobs, leases and fenced
+updates. Public contract rules remain the safety mechanism when leases expire
+or outside keepers compete.
+
+| Observed condition | Candidate operation |
+|---|---|
+| Created, start passed | Unfunded `expire()` |
+| Funded, reveal window ended | `advance(work_limit)` |
+| Closing/Sweep before close deadline | Bounded continuation |
+| Ready before close deadline | `finalize()` and inspect typed result |
+| Unfinished, close deadline passed | Closing `expire()` |
+| Cleared and unpublished | Registry `record_clearing` |
+| Cleared/Cancelled, delivery deadline passed | `expire_range` until resolved |
+| Settled, execution unpublished | Registry `record_settlement` |
+| Retention threshold approaching | Typed maintenance, TTL extension or restoration |
+
+Jobs identify network/release/contract/operation and observed stage/epoch/cursor.
+Reread authoritative state and simulate before signing. Supersede stale jobs
+when another caller advances. Exclusion is progress with a new epoch; operators
+cannot choose another price or recalculate a cleared book.
+
+Prioritize deadline safety, closing, expired liability resolution, retention,
+then publication/backfill. Maintain entries early enough to survive closing
+work spikes. Enforce fee ceilings, retry limits and per-auction/network XLM
+budgets; alert on exhaustion and retain manual public actions. Escrow has no
+undisclosed keeper-fee deduction or protocol subsidy.
+
+Fee signers authorize only allowlisted public methods on verified contracts.
+Use isolated restricted signers, rotate fee accounts and separate deployment/
+asset-admin credentials. Persist intent, envelope/hash and attempt outcomes.
+Different auctions can progress concurrently, while shared auction accounting,
+factory/registry state or source sequence can still contend.
+
+Optional reminders retain consent, contact destination, bid/auction reference
+and ledger deadlines only. Delivery is best effort with unsubscribe/retention
+controls; it neither reveals a bid nor extends a window.
+
+### 13.19 Price consumers and curated oracle boundary
+
+Market views show source price/time, allocated volume, actual execution,
+pending/final status, delivery deadline, quote/release identity and publication
+time together. Retain zero-execution history. `latest` is source-ordered clearing;
+`latest_settled` is positive execution ordered by clearing source, not publication.
+
+OracleAdapter exposes only `base`, `decimals`, `resolution` and `lastprice`. It
+returns raw clearing data, including before delivery, reports resolution zero
+and has no freshness/manipulation filter. Consumers explicitly accept the partial
+surface; full SEP-40 conformance is not claimed. [SEP-40](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0040.md).
+
+A curated feed is an optional later contract/service requiring its own review.
+Define eligible release/asset/issuer sources, actual volume/execution thresholds,
+participation/concentration controls, quote/depeg policy, source-age limits,
+aggregation/outlier rules and unavailable/stale results. Full SEP-40 also needs
+bounded asset enumeration and historical lookups with defined timestamps and
+resolution.
+
+Curated source policy must be constructor-fixed or explicitly governed with
+versioning/delay. A guardian may only mark that feed unavailable under policy;
+it cannot rewrite raw history or access escrow. Lending/vault consumers supply
+their own collateral/fallback rules. Neither a curated feed nor a price-publisher
+key is required by the initial auction product.
+
+### 13.20 Deployment and service operations
+
+Separate local, Testnet and Mainnet configuration, signers, databases, buckets
+and release catalogs. Record test-network resets so old cursors/addresses cannot
+be confused with a new network incarnation.
+
+A release bundle contains source revision, lockfiles, compiler/Rust SDK/CLI
+versions, exact WASMs/hashes/specifications, constructor arguments, salts,
+addresses/deployment references, tested protocol/resource limits, generated
+bindings and SDK compatibility. The PoC pins Rust 1.94.1/Soroban SDK 25.3.2;
+production qualifies its selected toolchain against the target network rather
+than inferring compatibility from that baseline.
+
+Build once, test exact artifacts, deploy mutually pinned registry/factory and
+verify on-chain identities. Deploy per-base adapters afterward. Publish the
+manifest, index from deployment to tip, run the complete pilot, then enable the
+release's creation route. Valuable production inventory requires independent
+review/remediation, resource qualification and network recovery drills.
+
+Serve versioned manifests through a trusted distribution point and ship trusted
+release identity with SDK/dApp. If manifests are signed, pin the verification key
+independently of the delivery endpoint. Verify all claims on chain. Remote catalog
+changes and query parameters never establish trust automatically.
+
+Use CDN-hosted static assets, stateless TLS API instances, workers without public
+ingress and a private backed-up database. Secret-manager credentials have least
+privilege: API reads projections, ingestion writes them, and workers access only
+required jobs/journals. The signer validates network/contract/method/fee policy
+independently of queue payloads. Private verification data stays outside public
+replicas.
+
+Use additive migrations, retained historical decoders and shadow replay before
+read cutover. Hosted rollback changes services, preserving chain ownership.
+New immutable releases use new addresses; old escrows remain under original
+code. Keep historical-release reads and exit paths available.
+
+### 13.21 Observability and failure isolation
+
+Measure provider/chain lag, oldest retained ledger, watermark/gaps, projection
+mismatches, queue age, unknown attempts, sequence conflicts, signing failures,
+fee headroom, closing workload/deadlines, TTL, asset permissions and per-asset
+deficits. Logs include network/release/contract/method/operation/hash/ledger
+without seeds, credentials, preimages or sensitive verification documents.
+
+The production engineering targets, to be demonstrated in release qualification,
+are 99.9% monthly read API availability, p95 projected reads below 500 ms and normal ingestion lag
+within three closed ledgers. Evaluate keeper work at each observed ledger;
+alert when sources stop progressing, retention gaps grow or deadline headroom
+shrinks. Inclusion depends on network availability and fee policy. These are
+production acceptance targets; measurements and any public service commitment
+are published separately. Operator ownership, recovery objectives and support
+windows are required release outputs, as specified in §26.
+
+| Failure | Response | Recovery authority |
+|---|---|---|
+| RPC stale/unavailable | Mark freshness unknown, verify failover network, reconcile hashes | Operator/user |
+| Indexer/API failure | Stale/incomplete labels and direct SDK/RPC fallback | Infrastructure operator |
+| Ingestion gap | Retain incomplete status and replay durable evidence | Indexer operator |
+| Keeper outage | Public manual actions and deadline/fee alerts | Any fee-paying caller |
+| Unsupported signing | Block before deposit; use tested signing flow | User/provider |
+| Frozen/full trustline | Preserve credit and expose precise restriction | Holder or asset admin |
+| Escrow deficit | Contract blocks outflows and preserves liabilities | External replenishment process |
+| Registry unavailable | Independent settlement and publication retry | Any publisher |
+| Frontend/release defect | Disable new hosted starts, identify affected release, retain exits | Operator and existing immutable rules |
+
+Backups cover raw checksums, projections, checkpoints, release catalog and
+job/attempt journals. Rebuild and compare representative accounts with chain in
+drills. User-held unrevealed recovery files are outside server recovery. A restored
+service must reconcile signed attempts before creating any replacement payment.
+
+### 13.22 Scaling and contract evolution
+
+Scale reads through indexed queries, caches and API replicas. Partition ingestion
+by network and bounded ledger/contract ranges with complete ordered watermarks.
+Scale workers across auctions and fee sources. Measure RPC quota, database,
+retention and operational costs separately from contract costs.
+
+Initial production retains one immutable escrow per auction and the 16-bid cap.
+Many simultaneous auctions do not constitute one pooled book. Splitting an
+offering creates independent clearing prices, minimum-fill tests and allocations;
+the interface must show them separately.
+
+Before increasing capacity, qualify atomic finalization with distinct Classic
+trustlines, supported contract accounts, late exclusions, maximal serialization,
+restoration and target-network limits. Any increase is a reviewed new template/
+release; the SDK shows its real bound.
+
+If desired capacity cannot fit atomic final checks, review a different compliance
+model explicitly. Paged snapshots with claim-time checks weaken the simultaneous
+price-contributor guarantee. Changed asset policy or verifiable proofs introduce
+different assumptions. A larger database or off-chain matcher does not preserve
+that guarantee. A new design requires reviewed economics/auth, formats, evidence
+and compatibility; the initial system keeps on-chain clearing.
+
+The production contract backlog includes stronger closing-window policy, stable
+event/schema versioning and complete resource/restore testing. Config/type/domain
+changes regenerate bindings and vectors. Protocol fees, separate treasury roles,
+discretionary pause, arbitrary-token adapters and curated feeds are separately
+scoped extensions, not implicit initial-release capabilities.
 
 ## 14. Security properties and verification gates
 
@@ -1139,30 +1769,21 @@ The [Python model](tools/design/auction_model.py), independent
 simplified lifecycle. They are not contract coverage, performance benchmarks,
 canonical-XDR validation, or an independent audit.
 
-The current baseline has 60 compiled-WASM integration tests, 9 shared unit tests,
-and 50 design tests. Runtime evidence includes genuine SACs, exact authorization,
-factory bootstrap/rollback, price-contributor revocation, TTL boundaries, very
-large fractional-price amounts, 48 independent clearing vectors, and a bounded
-finalizer measurement. The 10,000-book comparison is model evidence, not 10,000
-guest executions. Broader account/auth adversaries, actual archival restoration,
-and complete worst-case resource qualification still require evidence. Maximum
-Buyback and late-exclusion finalizers now also have CPU/memory/footprint and
-canonical ledger/event/return/key/entry byte measurements. Nine tooling tests
-protect the report-integrity and unchanged 95% gates.
-Local regressions also verify real Ed25519 classic-account and custom-account
-authorization, classic-current-admin create/fund in both modes, 2-of-2 multisig,
-signed-call mutation/replay/expiry rejection, one authentication
-callback re-entry attempt, 36 independent commitment vectors, expired snapshot
-recovery, distinct quote-pair histories, publication failure isolation, and all
-16 exclusions on a 4096-tick grid. Snapshot recovery uses the pinned test host's
-recording-mode automatic restoration; it does not test a network restoration
-transaction, footprint, rent, or RPC acceptance. See the
-[cryptographic review](docs/security/CRYPTOGRAPHIC_REVIEW.md).
-The native LLVM workflow enforces the 95% executable-line target separately
-for every production contract source; see [testing methodology](docs/TESTING.md).
-This does not establish complete branch/path or guest-instruction coverage. Review dependencies,
-compiler and artifacts, then complete independent audit/remediation before mainnet.
-None of these deployment gates is already passed by a design document.
+The [testing guide](docs/TESTING.md) owns dated suite totals and coverage
+measurements. The [contract review](docs/security/CONTRACT_REVIEW.md) and
+[cryptographic review](docs/security/CRYPTOGRAPHIC_REVIEW.md) record compiled-WASM,
+genuine SAC, scoped and signed authorization, two-leg rollback, revocation,
+clawback, TTL, provenance, independent vectors and bounded-finalizer evidence.
+The native LLVM workflow separately enforces the per-file executable-line
+coverage policy. Model comparisons, native source coverage and guest execution
+are distinct evidence classes.
+
+Current local evidence does not establish complete target-network restoration,
+worst-case fee/resource acceptance, broad stateful fuzz coverage or wallet/service
+integration. Qualification must use exact release artifacts on the target
+protocol and supported account models. The application also needs independent
+security review of signing intent, secret handling, ingestion correctness and
+operational keys. Full-system acceptance is specified in §23.
 
 ## 15. Repository structure and implementation sequence
 
@@ -1186,42 +1807,92 @@ ARCHITECTURE.md                   # complete product architecture
 README.md                         # setup, scope, evidence, repository map
 ```
 
-Planned application/integration packages, absent from the current repository:
+### 15.1 Target repository additions
+
+These paths define the intended package boundaries; they are not present yet.
+Existing contract paths remain stable, and the application workspace is added
+alongside the Rust workspace.
 
 ```text
-contracts/oracle-feed/     # later, separately reviewed curated feed (§11.3) — distinct from the implemented OracleAdapter
-tests/integration/         # later extended classic-account/restoration scenarios
-tests/fuzz/                # contract/reference and stateful fuzzing
-sdk/                      # BigInt, XDR, wallet and keeper utilities
-dapp/                     # issuer/bidder reference interface
+sdk/generated/                 # @crossing/contracts from released specifications
+sdk/core/                      # @crossing/sdk, browser-safe protocol modules
+sdk/server/                    # server transport and keeper helpers
+sdk/tests/                     # bindings, vectors, exact amounts and transaction lifecycle
+dapp/                          # React/TypeScript reference application
+services/indexer/              # ledger source, XDR decoding, projection and reconciliation
+services/api/                  # public query API and update hints
+services/keeper/               # permissionless progress, expiry, publication and retention
+services/notifications/        # optional reminders without reveal secrets
+services/onboarding/           # optional issuer/provider adapter; isolated private data
+packages/api-types/            # public schemas, pagination and error representations
+db/migrations/                 # versioned projections, jobs and checkpoints
+infra/                         # environment configuration, deployment and dashboards
+releases/                      # immutable manifests, ABI hashes and compatibility metadata
+tests/e2e/                     # wallet-to-ledger and cross-service acceptance
+tests/fixtures/ledgers/         # committed and adversarial replay fixtures
+tests/fuzz/                    # stateful contract/reference comparisons
+contracts/oracle-feed/         # optional later curated feed with separate review
 ```
 
-The initial core implementation covers common math/types and encoding vectors; funding/escrow;
-pure clearing and cursors; atomic compliance; reserved settlement/refund/expiry;
-factory; and retriable registry. Complete adversarial tests/resource sizing,
-SDK/dApp, and the separate curated feed review remain future work. The workspace
-pins Rust 1.94.1, Soroban SDK 25.3.2, and `wasm32v1-none`, with `Cargo.lock`.
-The checked build/test order is in `scripts/check.sh`; build WASM before the
-integration tests, which execute those artifacts. Stellar CLI, wallets, an RPC
-endpoint, and network credentials are not required for the local workflow. A
-future deployment must select and record its tested CLI/network configuration.
+Keep generated bindings separate from handwritten orchestration. UI and server
+packages depend on the SDK and API schemas; the SDK never imports the dApp or
+database. Optional onboarding depends on provider contracts rather than sharing
+asset-admin secrets with public workers.
 
-## 16. Primary references and audit boundary
+### 15.2 Delivery sequence and dependencies
 
-Platform references checked on 20 October 2026:
+| Stage | Deliverable | Completion evidence |
+|---|---|---|
+| 1 Contract release qualification | Economics/ABI freeze, resource envelopes, restoration, dependency review and independent review/remediation | Exact WASMs, reproducible bundle and tested release limits |
+| 2 SDK and release identity | Generated bindings, BigInt amounts, manifest checks, signing/confirmation and recovery primitives | Rust/client vectors and real signed Testnet actions with unknown-status recovery |
+| 3 Ingestion and query services | Durable ledgers, idempotent projection, reconciliation, historical replay and versioned API | Database rebuild from raw evidence, no gaps/duplicates and chain comparison |
+| 4 Issuer and investor dApp | Creation/funding, Open/Sealed participation, encrypted recovery, claims and portfolios | Full flows across the supported wallet/account matrix |
+| 5 Operating services | Keeper, retention, monitoring, fee budgets, failover and recovery runbooks | Deadline/TTL drills, competing workers and restart after uncertain submission |
+| 6 Integrated pilot | All four mode combinations, actual issuer policies and representative users | Complete escrow-to-withdrawal conservation and correct history under injected failures |
+| 7 Production release | Reviewed network/asset identities, operational readiness and immutable public manifest | All initial-release gates in §23 satisfied |
+| Later extensions | Ramps, additional signing models, curated oracle or capacity changes | Separate scope, compatibility policy and review for each extension |
 
-- [SAC identity, authorization, balances, and issuer powers](https://developers.stellar.org/docs/tokens/stellar-asset-contract)
-- [Soroban authorization / invocation trees](https://developers.stellar.org/docs/learn/fundamentals/contract-development/authorization)
-- [Persistent and instance storage](https://developers.stellar.org/docs/learn/fundamentals/contract-development/storage/persisting-data)
-- [Archival and restoration](https://developers.stellar.org/docs/learn/fundamentals/contract-development/storage/state-archival)
-- [Storage and resource verification](https://developers.stellar.org/docs/build/guides/storage/storage-strategies)
-- [SEP-40 Oracle Consumer Interface](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0040.md)
+Indexer work can proceed from ABI fixtures while SDK signing is developed; dApp
+screens can use those contracts once schemas stabilize. A pilot requires all
+mandatory components together. Curated-feed or ramp work does not delay the
+initial auction product because neither controls its settlement path.
 
-This review specifies economics, security boundaries, and failure handling. It
-does not certify competitor/market claims or legal transfer restrictions. Remaining
-implementation and empirical evidence is tracked explicitly in the design audit.
+The contract workspace pins Rust 1.94.1, Soroban SDK 25.3.2 and
+`wasm32v1-none`, with locked dependencies. The checked local build/test order is
+in `scripts/check.sh`; build verified WASM before its integration tests. Local
+contract testing requires no wallet, RPC endpoint or deployment credentials.
+Application releases add their own locked client toolchain, database migrations,
+provider compatibility and environment-specific verification.
 
-## 17. Exact interface and data requirements from the second review
+## 16. Primary references and platform compatibility
+
+The contract source, generated WASM specifications and canonical vectors define
+Crossing's exact implementation. The following primary sources define the
+platform interfaces used by the target system. Integration references were
+checked on **5 November 2026**; deployment acceptance still verifies the actual
+target protocol, provider versions and network settings.
+
+| Platform area | Primary reference | Crossing dependency |
+|---|---|---|
+| Asset representation and controls | [Stellar Asset Contract](https://developers.stellar.org/docs/tokens/stellar-asset-contract), [SEP-41](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0041.md) | Built-in SAC identity plus issuer controls; generic SEP-41 alone is insufficient |
+| Contract authorization | [Authorization framework](https://developers.stellar.org/docs/learn/fundamentals/contract-development/authorization), [authorization guide](https://developers.stellar.org/docs/build/guides/auth/contract-authorization) | Invocation trees, source/address credentials and contract accounts |
+| Storage layout | [Persisting data](https://developers.stellar.org/docs/learn/fundamentals/contract-development/storage/persisting-data), [storage strategies](https://developers.stellar.org/docs/build/guides/storage/storage-strategies) | Separate bounded entries and shared-state contention |
+| Archival | [State archival and restoration](https://developers.stellar.org/docs/learn/fundamentals/contract-development/storage/state-archival) | TTL, automatic restoration and explicit restore operations |
+| Transaction resources | [Fees, limits and metering](https://developers.stellar.org/docs/learn/fundamentals/fees-resource-limits-metering) | XLM fees, simulation and measured envelopes |
+| Transactions and RPC | [Transaction lifecycle](https://developers.stellar.org/docs/learn/fundamentals/transactions/transaction-lifecycle), [simulation](https://developers.stellar.org/docs/data/apis/rpc/api-reference/methods/simulateTransaction), [submission](https://developers.stellar.org/docs/data/apis/rpc/api-reference/methods/sendTransaction), [confirmation](https://developers.stellar.org/docs/data/apis/rpc/api-reference/methods/getTransaction) | Prepared intent through confirmed inclusion |
+| Ingestion | [Events](https://developers.stellar.org/docs/data/apis/rpc/api-reference/methods/getEvents), [ledgers](https://developers.stellar.org/docs/data/apis/rpc/api-reference/methods/getLedgers) | Bounded live history and durable ledger replay |
+| Issuer metadata | [SEP-1](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0001.md) | Domain-linked discovery; not asset permission |
+| Optional identity and ramps | [SEP-10](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0010.md), [SEP-12](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0012.md), [SEP-24](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0024.md), [SEP-45](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0045.md) | Provider-dependent web auth, verification and ramps; SEP-45 is a draft |
+| Wallets | [SEP-43](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0043.md) | Draft interface reference with tested wallet capabilities |
+| Price consumers | [SEP-40](https://github.com/stellar/stellar-protocol/blob/master/ecosystem/sep-0040.md) | Partial raw interface; full feed requires additional methods and policy |
+
+Release compatibility records include network identity/protocol, Rust and client
+SDKs, RPC/provider behavior, wallets/account types, restoration path and reviewed
+capacity. They are verified together rather than inferred from one package's
+version. A specification's existence does not establish provider support or
+protocol-wide conformance by Crossing.
+
+## 17. Exact interface and data requirements
 
 This section supplements the lifecycle description with implementation contracts.
 All methods returning a contract error must cause invocation rollback. Native and
@@ -1420,8 +2091,8 @@ not change `L`; only an actual inflow/outflow does.
 
 | Transition | Required deltas |
 |---|---|
-| Issuer funding | Issuer asset balance `+Q` or `+B`; same asset `R` and `L` increase equally |
-| Bid deposit | Deposit asset balance `+d`; same asset `P` and `L` each `+d` |
+| Issuer funding | Escrow's issuer-funded asset balance `+Q` or `+B`; same asset `R` and `L` increase equally |
+| Bid deposit | Escrow's deposit-asset balance `+d`; same asset `P` and `L` each `+d` |
 | Sale finalization | RWA `R:Q -> F`; `K(issuer,rwa)+=Q-F`; liabilities/balances unchanged |
 | Buyback finalization | Quote `R:B -> C`; `K(issuer,quote)+=B-C`; liabilities/balances unchanged |
 | Cancellation | Issuer-asset `K(issuer)+=R`, `R=0`; bidder deposits stay pending |
@@ -1527,23 +2198,90 @@ the reviewed code permits. A future emergency mechanism would require an
 explicit new design and user-visible trust tradeoff. Independent review before
 valuable/mainnet funding is therefore a release requirement.
 
-## 23. Acceptance boundary after the second review
+## 23. Full system acceptance criteria
 
-The design audit maps identified issues to requirements and model/runtime tests.
-The local suite now exercises compiled WASM against genuine SACs, scoped
-authorization, two-leg rollback, provenance rejection, credits, and expiry, plus
-a cross-language canonical XDR vector. These checks do not establish full release
-readiness. Classic-account/trustline adversaries, host re-entry attacks, archival
-restoration, broad contract/reference fuzzing, branch/path exploration, target-network resource
-benchmarks, SDK/dApp, and the separately governed curated oracle feed (§11.3)
-remain tracked release work; the partial, raw `OracleAdapter` read surface is
-implemented and covered above. See
-[the contract review](docs/security/CONTRACT_REVIEW.md) for measured results and
-limits. The factory, auction, registry, and shared library have separate internal
-review records. Deployed to and exercised on Stellar Testnet (see
-[deployments/](deployments/)); no Mainnet deployment or external audit has
-occurred.
+Production acceptance applies to a complete release: exact contracts, generated
+bindings, SDK/dApp, provider configuration, indexer/API, workers and operational
+runbooks. The existing [review records](docs/security/CONTRACT_REVIEW.md) establish
+PoC evidence; the following criteria define completion of the full implementation.
 
+### 23.1 Contract and economic acceptance
+
+All invariants in §14 must hold across Sale/Buyback and Open/Sealed modes, including
+maximum grid/capacity, fractional and near-i128 values, actual minimum fill,
+pro-rata dust, repeated exclusions, claim ordering, penalties, cancellation and
+full drainage of credits. Generate books independently and compare compiled-WASM
+results with the reference rather than comparing two wrappers of the same code.
+
+Qualify genuine Classic trustlines, actual multisig/address credentials and each
+supported contract-account policy. Verify invocation mutations, replay/expiry,
+callback behavior, full trustlines, late revocation, two-leg rollback, global
+freezes, clawback deficit suspension/replenishment, retained ownership and
+unregistered-source rejection. Measure complete transaction envelopes and real
+network restoration, not only local host instruction estimates.
+
+### 23.2 SDK and wallet acceptance
+
+| Case | Required result |
+|---|---|
+| Every canonical config/commitment vector | SDK XDR/hash equals independent Rust/reference outputs |
+| Large/fractional values and invalid input | Exact units or explicit validation error; no floating loss |
+| Wrong network, code hash, bindings or config | Signing preparation rejected |
+| Wallet modifies invocation, source or auth tree | Signed envelope rejected before broadcast |
+| Missing multisig or unsupported address credentials | Clear incomplete/unsupported state before funds move |
+| RPC timeout after acceptance | Known hash reconciled without a duplicate deposit/withdrawal |
+| Source sequence conflict and multiple browser tabs | Bounded rebuild after reconciliation; no second economic action |
+| Separate or inline restoration | Original entries retained and action resimulated where required |
+| Encrypted export/import, wrong password or changed context | Correct recovery or authenticated failure; no secret leakage |
+| Oversized recovery file, duplicate fields or hostile KDF parameters | Rejected before expensive derivation; fixed profile and context enforced |
+| Metadata redirect or private-network destination | Rejected by isolated fetcher; no credential or internal-network exposure |
+| Lost/withheld reveal and delivery expiry | Correct immutable penalty/refund behavior and credit display |
+
+Test hardware/institutional or contract-wallet support only for combinations
+actually included in the release matrix. Browser crypto dependencies, recovery
+formats and frontend secret-handling paths receive security review.
+
+### 23.3 Indexer and service acceptance
+
+| Failure or load case | Required result |
+|---|---|
+| Duplicate ledger/event and worker restart | Exactly one effective projection transition |
+| Crash before/after raw write or database commit | Replay-safe checkpoint with no acknowledged missing data |
+| Child created and used in the same ledger | Complete ingestion from creation, including later calls |
+| Missing owner/credit fields in events | Authoritative reconciliation rather than source-account guesses |
+| Failed/rolled-back contract invocation | No delivered position or financial projection |
+| Gap beyond live RPC retention | Explicit incomplete status and historical replay |
+| Decoder/schema upgrade | Shadow replay agrees before cutover; historical releases remain readable |
+| Concurrent getter state changes | Actual observation ledger/range exposed; no fabricated snapshot |
+| External donation, permission change or clawback | Balance/permission reconciliation and correct deficit alerts |
+| Competing keepers and expired job leases | Deterministic outcomes; stale jobs cannot choose new terms |
+| Signer/network/database outage after submission | Journal/hash reconciliation before replacement work |
+| API/indexer unavailable | Verified direct SDK/RPC claim and withdrawal remain usable |
+| Provider disagreement or test-network reset | Quarantine/reset handling without mixing histories |
+| Backup restoration | Positions rebuilt and compared with chain; old signed attempts reconciled |
+
+Load tests cover release-expected auctions, event rates, history size, concurrent
+wallet activity and worst-case closing waves. Establish sustainable ingestion,
+API latency and worker budgets with headroom; publish measured limits separately
+from the engineering targets in §13.21. Simulate fee-budget exhaustion and
+near-deadline contention, and verify alerts reach an accountable operator.
+
+### 23.4 Integrated lifecycle and launch gate
+
+Run all four auction combinations through real wallet signing on Testnet:
+issuer onboarding and escrow authorization, creation/funding, bids/reveal,
+closing with a restart, raw publication, partial/revoked delivery, expiry, credit
+withdrawals and final execution publication. Include an oversubscribed Sale,
+sparse Buyback, minimum-fill cancellation, non-reveal penalty and an old-release
+credit restored after service migration. Reconcile both SAC balances and all
+liability buckets at each terminal outcome.
+
+Launch requires reproducible reviewed artifacts, independent security findings
+resolved to the release policy, a verified manifest/network/asset catalog,
+completed recovery and failover drills, fee/rent funding, documented operational
+ownership, release licensing/dependency notices, maintenance/support boundaries
+and all mandatory acceptance cases. Optional ramps and curated feeds
+have their own acceptance boundaries and cannot be assumed from auction launch.
 
 ## 24. Implemented wire types and reproducible checks
 
@@ -1574,3 +2312,202 @@ tests, and the independent XDR-vector check. `scripts/coverage.sh` separately me
 native source execution, enforces the per-file 95% line threshold, and produces
 HTML/JSON reports; all-WASM behavioral/resource tests remain required. Read `docs/security/CONTRACT_REVIEW.md`
 for the boundary between local evidence and production release gates.
+
+
+## 25. Open source governance and distribution
+
+The completed Crossing project is open source under [Apache-2.0](LICENSE).
+The project includes contracts, SDK, dApp, indexer/API, keepers, deployment
+configuration, tests and technical documentation. Project governance controls
+source and release decisions; it does not authorize RWA transfers, upgrade old
+auctions or confer custody over users' credits.
+
+### 25.1 Project policies and responsibility
+
+| Policy | Scope in the completed project |
+|---|---|
+| [Contributing](CONTRIBUTING.md) | Contributor workflow, regression evidence, compatibility and submission rights |
+| Governance (§25.1) | Maintainer roles, design decisions, critical review, releases and succession |
+| Community conduct (required production policy) | Participation, confidential reporting, moderation and conflicts |
+| [Security](SECURITY.md) | Vulnerability intake, coordinated disclosure and affected-release handling |
+| Support (§26.4) | User help, supported versions and service boundaries |
+| Licensing (§25.2) | Distribution scope, attribution and incorporated third-party material |
+| Maintenance (§26) | Component upkeep, dependency policy, operating schedule, recovery and retirement |
+| Design decisions (pull requests and owning documentation) | Durable decisions about economics, authority, compatibility and operations |
+
+Assign accountable roles for contracts/security, SDK, dApp, data services,
+operations and release management. Each production service has a primary and
+backup owner, access policy and handover instructions. Role definitions belong
+in the architecture; actual names, endpoints and access membership are maintained
+in the release/operator records. Missing staffing cannot be represented as a
+completed production-support requirement.
+
+Economic, custody, authorization, encoding, capacity and source-policy changes
+require a written decision and regression evidence. Critical code and release
+changes require a qualified reviewer other than the author and a second release
+verification. No single person approves their own production-sensitive change.
+Private security work follows the same evidence requirements with disclosure
+sequenced to protect affected users.
+
+Branch protection, required checks, publishing access, protected tags and private
+reporting are verified hosting controls. Policy files alone cannot enable them.
+Record their production configuration without embedding credentials in source.
+
+### 25.2 License scope and redistribution
+
+Original contracts, libraries, SDK, dApp, services, tests and documentation use
+Apache-2.0 unless a file explicitly states otherwise. Dependencies and external
+assets retain their terms. Distributions include license metadata, project
+LICENSE and applicable project/upstream notices. Contributor copyrights
+remain with their owners; contribution terms are defined in LICENSE §5 and
+CONTRIBUTING, without a separate assignment requirement.
+
+Keep the canonical LICENSE unchanged. Preserve actual attribution, identify
+modifications and verify rights for vendored code, documents, imagery, fonts
+and branding. The license's standard example appendix is not an ownership
+statement. Any distributed NOTICE is informational and does not add restrictions.
+Before distribution, inventory incorporated material, record its origin and
+license, include required notices and block release on unresolved obligations.
+
+### 25.3 Reproducible releases and supply chain
+
+Each release binds source/tag, lockfiles, target/features, compiler, exact WASMs,
+contract specifications, generated clients, checksums, review evidence, software
+bill of materials, license/notice files and deployment manifests. Publish
+immutable versioned artifacts in a durable release archive; temporary CI
+retention is not release hosting. Sign release provenance and manifests with
+keys anchored independently of their download location, and verify artifacts
+against deployed executables before enabling new markets.
+
+Inventory both direct and transitive incorporated dependencies and assets for
+each distributable. Review their license obligations and advisories, retain
+required upstream notices and document deliberate exceptions. Unknown origin,
+missing notices or unresolved incompatible terms block the affected release.
+Publish the public dependency inventory without exposing private verification
+records. The current artifact helper includes the project LICENSE;
+complete production inventory/provenance generation remains implementation work.
+
+Isolate publication credentials from operational fee signers and asset admins.
+Package verification checks what consumers download, including generated code
+and documentation. No new package or source release mutates previously deployed
+WASM or migrates custody. SDK/API support and deprecation policies are versioned
+independently from immutable contract identities.
+
+### 25.4 Independent operation and forks
+
+An independently operated instance publishes its network incarnation, release
+identity, asset policies, endpoints, operator responsibilities and support terms.
+A fork retains license/attribution and identifies its modifications; a different
+deployment cannot claim an original release's review evidence. A compatible
+client or keeper can interact with a verified original release without obtaining
+permission to alter recipients or spending authority.
+
+Open-source code does not make customer verification records or issuer documents
+public datasets. Reproducible installation uses configuration schemas, sample
+values and deployment instructions, with credentials and private material kept
+outside the public repository. Project branding and external asset names remain
+subject to their own rights.
+
+## 26. Maintenance and project continuity
+
+Maintenance is part of the completed system, covering source, deployed contract
+dependencies, hosted services, release compatibility and outstanding user
+positions. This section defines the operating policy;
+[operations](docs/operations/README.md) defines build/deployment/recovery
+procedures. These are required production capabilities, with implementation
+status tracked separately from the target design.
+
+### 26.1 Component ownership and change policy
+
+Every component has a primary owner, backup, supported-version record and
+applicable checks. Review bug reports, advisories, dependency updates, compiler/
+host upgrades and stale documentation. Contract or ABI changes require reviewed
+regressions, rebuilt artifact identities and updated bindings/vectors. Resource,
+authorization and archival evidence is renewed after relevant runtime changes.
+
+Preserve old source tags, specifications, deployment manifests and decoding
+support for outstanding positions. Disable new creation on deprecated releases
+without removing read/withdrawal/restoration tools. Support windows for hosted
+clients do not erase liabilities or change immutable credit ownership.
+
+### 26.2 Financial retention and operating budgets
+
+Inventory the complete retention dependency graph: instances, shared code,
+bid/tick/owner/nonce/credit entries, SAC balances/permissions, factory registration,
+registry history/pointers and adapters. Monitor live-until ledgers separately
+and renew early enough to accommodate operator response, restoration and multiple
+failed submissions. Typed maintenance and restoration preserve original values;
+neither creates a fresh owner nor reopens an expired participation window.
+
+For the reference contract release, construction covers delivery plus the
+120,960-ledger recovery margin; rolling retention targets 518,400 within current
+network bounds. Other releases publish their measured constants and supported
+horizons. Financial ownership outlives a finite retention horizon, while access
+can require a fee-paying restoration transaction.
+
+The operator maintains a disclosed XLM budget for public progress, retention and
+recovery, with per-auction forecasts, fee ceilings, low-runway alerts and backup
+funding authority. Initial contracts deduct no keeper commission from escrow.
+A sponsorship change requires its own reviewed policy rather than silently
+spending investor deposits. A funding shortfall triggers incident handling and
+manual fallback; it cannot extend an immutable deadline.
+
+### 26.3 Service schedule and recovery objectives
+
+Evaluate ledger progress, pending closing/expiry/publication, unknown attempts,
+retention and deadline headroom continuously. Review unresolved positions,
+provider history headroom, fee/rent runway and backup health daily; dependency/
+advisory proposals weekly; restore/replay drills at least monthly. Protocol,
+provider and toolchain changes trigger compatibility checks before adoption.
+Record completion with network instance, observed ledger and accountable role.
+
+Set measurable recovery objectives per component and prove them in drills.
+The reference targets are API recovery within 60 minutes and keeper/signer
+recovery within 15 minutes, subject to stricter auction deadline requirements.
+Recoverable projection snapshots may lag by at most 15 minutes provided raw
+ledger replay closes the gap. Durable acknowledged raw history and signed-attempt
+journals have a zero-loss objective under the defined storage failure model.
+Validate recovery under loss of one process, node or availability zone; total
+loss of every replica and backup is outside this reference fault model.
+Acknowledge raw-history and journal writes only after durable replication across
+separate failure domains; persist signed-attempt identity before broadcast.
+Retain checksummed raw-ledger objects and independently recoverable backups.
+Browser-owned reveal secrets are outside server recovery objectives. These
+targets do not imply that the current repository already operates those services.
+
+Restore with signing disabled. Verify network incarnation/checkpoints, replay
+gaps, reconcile hash/sequence journals and compare representative balances/
+liabilities against chain before enabling workers. Source ingestion and verified
+financial projections use separate completeness watermarks. Report degraded
+state until both meet their declared boundaries.
+
+### 26.4 Security response and supported versions
+
+Provide private vulnerability intake with primary/backup coverage, triage,
+affected-version analysis, coordinated disclosure and a reviewed release path.
+A production incident may disable new hosted starts or a compromised signer,
+but cannot pause existing immutable auctions. Publish affected hashes and
+usable exit/recovery paths accurately, including external asset dependencies.
+
+The reference stable-client policy supports the current SDK major and its
+previous major for 12 months after replacement; a versioned API major receives
+at least six months' deprecation notice. Publish concrete dates with releases.
+Contract provenance, ABI records and user exit tooling remain available for
+outstanding positions regardless of ordinary client-version support periods.
+Changes to this policy are published prospectively rather than silently removing
+an existing commitment. These are target production policies, not claims of an
+existing stable package or support contract.
+
+### 26.5 Retirement and handover
+
+Retirement begins by stopping new obligations and publishing affected services,
+network/release identities and exit instructions. Resolve or explicitly hand over
+closing, expiry, publication and retention jobs; reconcile all uncertain attempts
+before transferring operational responsibility. A receiving operator accepts
+its role explicitly. Document access removal and signer/key rotation.
+
+Preserve durable release/source/ABI records, public exports and direct SDK/CLI
+instructions. Publish when service/fee funding ends and how independent parties
+can maintain or restore outstanding records. Retiring infrastructure never
+forfeits credits to maintainers or issuers. The ability to transfer still depends
+on network availability, SAC permissions and actual backing.
