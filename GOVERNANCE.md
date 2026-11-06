@@ -73,6 +73,9 @@ and private vulnerability reporting are hosting settings. Files in this reposito
 do not prove that those settings are enabled. Before publishing a supported
 production release, verify those controls and record their configuration.
 [GitHub branch protection](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches).
+Branch protection and private vulnerability reporting are currently tracked
+as open, named future actions in [SECURITY.md](SECURITY.md#planned-hosting-controls),
+not assumed enabled.
 
 ## Releases and compatibility
 

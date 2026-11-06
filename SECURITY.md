@@ -20,6 +20,23 @@ expected versus observed effects, and the affected assets/invariants. Prefer a
 local failing test over interaction with live assets. There is no promised response
 SLA or reward program.
 
+## Planned hosting controls
+
+Two repository-hosting controls are not yet configured. Both require
+organization-admin access on the GitHub repository, which the maintainer
+account used for this documentation pass does not currently hold.
+
+| Control | Current state | Future action | Owner |
+|---|---|---|---|
+| Private vulnerability reporting | Disabled (confirmed via the GitHub API) | Enable in Settings → Code security → Private vulnerability reporting | An org-admin maintainer, see [MAINTAINERS.md](MAINTAINERS.md) |
+| Branch protection on `main` | Not configured (confirmed: no protection rule exists) | Add a protection rule requiring the `verify` CI check and review from a Code Owner before merge | An org-admin maintainer, see [MAINTAINERS.md](MAINTAINERS.md) |
+
+Until both are enabled, the §"Reporting" fallback (contacting a maintainer
+directly) is the only private channel, and nothing but reviewer discipline
+enforces the review policy in [GOVERNANCE.md](GOVERNANCE.md)'s "Review and
+merge policy". This table is removed once both controls are confirmed
+enabled; it is not a permanent disclosure of unresolved risk.
+
 ## Review boundaries
 
 - [Consolidated findings and fixes](docs/security/FINDINGS_AND_FIXES.md) — every
