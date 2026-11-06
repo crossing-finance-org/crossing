@@ -1,0 +1,30 @@
+name: Feature or design proposal
+description: Propose a scoped change to Crossing's full system or implementation.
+body:
+  - type: markdown
+    attributes:
+      value: Use SECURITY.md for vulnerabilities. Do not include keys, private verification data or reveal secrets.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem and affected users
+      description: Explain the concrete use case and the component or architecture section involved.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior and alternatives
+      description: Distinguish target architecture from functionality currently implemented.
+    validations:
+      required: true
+  - type: textarea
+    id: effects
+    attributes:
+      label: Compatibility and maintenance
+      description: Describe effects on economics, custody, authorization, ABI, resources, licensing and ongoing operation as applicable.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Acceptance evidence
+      description: What observable result and validation would establish completion?

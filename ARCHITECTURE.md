@@ -2327,13 +2327,13 @@ auctions or confer custody over users' credits.
 | Policy | Scope in the completed project |
 |---|---|
 | [Contributing](CONTRIBUTING.md) | Contributor workflow, regression evidence, compatibility and submission rights |
-| Governance (§25.1) | Maintainer roles, design decisions, critical review, releases and succession |
-| Community conduct (required production policy) | Participation, confidential reporting, moderation and conflicts |
+| [Governance](GOVERNANCE.md) (§25.1) | Maintainer roles, design decisions, critical review, releases and succession |
+| [Code of conduct](CODE_OF_CONDUCT.md) | Participation, confidential reporting, moderation and conflicts |
 | [Security](SECURITY.md) | Vulnerability intake, coordinated disclosure and affected-release handling |
-| Support (§26.4) | User help, supported versions and service boundaries |
-| Licensing (§25.2) | Distribution scope, attribution and incorporated third-party material |
-| Maintenance (§26) | Component upkeep, dependency policy, operating schedule, recovery and retirement |
-| Design decisions (pull requests and owning documentation) | Durable decisions about economics, authority, compatibility and operations |
+| [Support](SUPPORT.md) (§26.4) | User help, supported versions and service boundaries |
+| [Licensing](LICENSING.md) (§25.2) | Distribution scope, attribution and incorporated third-party material |
+| [Maintenance](MAINTENANCE.md) (§26) | Component upkeep, dependency policy, operating schedule, recovery and retirement |
+| [Design decisions](docs/decisions/) (pull requests and owning documentation) | Durable decisions about economics, authority, compatibility and operations |
 
 Assign accountable roles for contracts/security, SDK, dApp, data services,
 operations and release management. Each production service has a primary and

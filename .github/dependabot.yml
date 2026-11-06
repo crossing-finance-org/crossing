@@ -5,6 +5,16 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      # Exact-pinned (`=`) on purpose: both change the compiled WASM's
+      # identity (soroban-sdk) or the test harness's signature primitive
+      # (ed25519-dalek). A major bump needs the full reviewed/benchmarked
+      # release process in CONTRIBUTING.md and MAINTENANCE.md, not a routine
+      # merge — see docs/security/ARCHITECTURE_REVIEW.md.
+      - dependency-name: "soroban-sdk"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "ed25519-dalek"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: github-actions
     directory: /
     schedule:

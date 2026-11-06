@@ -13,6 +13,7 @@ Four deployable smart contracts and the shared Rust library are implemented.
 | [Testing and coverage](TESTING.md) | Suite layers, independent fixtures, native measurement, and the per-file 95% coverage gate |
 | [Working demonstration](POC_DEMO.md) | Reproducible local scenarios with asserted outcomes |
 | [Findings and fixes](security/FINDINGS_AND_FIXES.md) | Every review finding across all passes, in one place, with a plain-language explanation of each defect and its fix |
+| [Architecture and documentation audit](security/ARCHITECTURE_REVIEW.md) | Full-project architecture v2.1 review: scope, findings, evidence, and remaining implementation gates |
 | [Contract review](security/CONTRACT_REVIEW.md) | Implementation findings, runtime evidence, and remaining qualification work |
 | [Auction logic review](security/AUCTION_LOGIC_REVIEW.md) | Clearing invariants, price-contributor compliance, escrow conservation, rounding, and sealed-bid limits |
 | [Cryptographic review](security/CRYPTOGRAPHIC_REVIEW.md) | Canonical commitments, independent vectors, real Ed25519 credentials, replay/expiry, and authentication callback rollback |
