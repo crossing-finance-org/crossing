@@ -88,13 +88,13 @@ def package():
     # Copy only verified artifacts; never glob unrelated build outputs.
     for name in (*value["artifacts"], MANIFEST):
         shutil.copyfile(directory / name, destination / name)
-    for name in ("Cargo.lock", "Cargo.toml", "rust-toolchain.toml", "LICENSE"):
+    for name in ("Cargo.lock", "Cargo.toml", "rust-toolchain.toml", "LICENSE", "NOTICE"):
         shutil.copyfile(ROOT / name, destination / name)
     checksums = {name: record["sha256"] for name, record in value["artifacts"].items()}
-    checksums.update({name: sha256(destination / name) for name in ("LICENSE",)})
+    checksums.update({name: sha256(destination / name) for name in ("LICENSE", "NOTICE")})
     (destination / "SHA256SUMS").write_text("".join(
         f"{digest}  {name}\n" for name, digest in checksums.items()))
-    print(f"Packaged four verified test WASMs, build metadata, and project license: {destination}")
+    print(f"Packaged four verified test WASMs, build metadata, and project license/notice: {destination}")
 
 
 def main():

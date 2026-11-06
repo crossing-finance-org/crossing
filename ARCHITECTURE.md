@@ -2385,7 +2385,7 @@ each distributable. Review their license obligations and advisories, retain
 required upstream notices and document deliberate exceptions. Unknown origin,
 missing notices or unresolved incompatible terms block the affected release.
 Publish the public dependency inventory without exposing private verification
-records. The current artifact helper includes the project LICENSE;
+records. The current artifact helper includes the project LICENSE and NOTICE;
 complete production inventory/provenance generation remains implementation work.
 
 Isolate publication credentials from operational fee signers and asset admins.

@@ -27,9 +27,10 @@ The verified build used by these scripts honors Cargo's configured target
 directory. `python3 scripts/wasm_artifacts.py directory` prints the WASM location;
 `verify` checks its recorded source inputs and four artifact hashes. Packaging
 writes the four WASMs, checksums, build manifest, lockfile, workspace manifest,
-toolchain and LICENSE to `<Cargo target directory>/verified-contracts/`.
-Checksums cover the four WASMs and the project license. The helper
-does not generate a target-specific dependency license inventory. Follow
+toolchain, and the project LICENSE and NOTICE to
+`<Cargo target directory>/verified-contracts/`. Checksums cover the four WASMs
+and both license files. The helper does not generate a target-specific
+dependency license inventory. Follow
 [architecture section 25.2](../../ARCHITECTURE.md#252-license-scope-and-redistribution) for incorporated upstream material before a
 public binary release.
 CI preserves this bundle as `tested-contracts-<commit>` for 14 days after checks
