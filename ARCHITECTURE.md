@@ -1957,7 +1957,7 @@ identifiers appear in the contract ABI.
 | `place_bid` | `Address, i128, i128` | Global `u32` bid ID |
 | `commit_bid` | `Address, BytesN<32>, BytesN<32>, i128` | Global `u32` bid ID |
 | `reveal_bid` | `u32, i128, i128, BytesN<32>` | `()`; bid stores revealed terms |
-| `advance` | `u32` work limit | `Progress { epoch, stage, cursor, processed }` |
+| `advance` | `u32` work limit | `Progress { stage, epoch, cursor, processed }` |
 | `finalize` | No input | `Finalization::Cleared(summary)`, `Excluded(id,epoch)`, or `Cancelled(reason)` |
 | `expire` | No input | Deterministic cancellation reason |
 | `claim_bid` / `expire_bid` | `u32` | `Resolution { delivered, rwa, quote, refund, reason, ledger, timestamp }` |
