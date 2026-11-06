@@ -2,6 +2,21 @@
 
 ## Unreleased — 0.1.0
 
+- Commit the governance, licensing, conduct, support, maintenance, and
+  architecture-review documents that existed only in the working tree, add
+  `MAINTAINERS.md`/`.github/CODEOWNERS` naming current maintainers, and wire
+  every "ask a repository owner" reference to them. Record the two hosting
+  controls that are not yet configured (private vulnerability reporting,
+  branch protection on `main`) as a named, owned, removable-once-done table
+  in `SECURITY.md` rather than leaving them as an unwritten gap. Add a
+  `dependabot.yml` ignore rule for major-version bumps on the two
+  exact-pinned crates. Fix the architecture review's own closing claim that
+  the documentation index linked it, when it didn't yet. Package NOTICE
+  alongside LICENSE in every verified WASM bundle, closing a gap between
+  finding A-04's claimed correction and what the packaging code and its
+  regression test actually checked. Correct one cosmetic field-order
+  mismatch in the `Progress` ABI table entry.
+
 - Expand the completed-project architecture to v2.1 with the dApp, SDK,
   indexer/API, keeper operations, governance, licensing, support and maintenance.
   Specify permissionless-claim authority, Testnet reset isolation and projection
