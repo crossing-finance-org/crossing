@@ -7,9 +7,12 @@ existing auction escrow, replace asset administrators or create on-chain voting.
 
 Role definitions and review requirements apply to the completed system. Actual
 maintainer identities and access membership are operational records, not invented
-architecture values. The repository's current contract PoC can use a smaller
-contributor group, but production release requires the ownership and review
-coverage defined below. [MAINTENANCE.md](MAINTENANCE.md) defines ongoing duties.
+architecture values; current maintainers are recorded in
+[MAINTAINERS.md](MAINTAINERS.md), kept in agreement with
+[.github/CODEOWNERS](.github/CODEOWNERS). The repository's current contract PoC
+can use a smaller contributor group, but production release requires the
+ownership and review coverage defined below. [MAINTENANCE.md](MAINTENANCE.md)
+defines ongoing duties.
 
 ## Roles and authority
 

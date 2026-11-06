@@ -9,10 +9,11 @@ interfaces and stored types.
 ## Reporting
 
 For a potential vulnerability, use the repository's private vulnerability report
-option in the GitHub Security tab when it is enabled. If it is unavailable, ask
-the repository maintainer for a private reporting channel without posting exploit
-details publicly. No dedicated security email has been configured in this
-repository. Never include private keys, wallet recovery material, or reveal secrets.
+option in the GitHub Security tab when it is enabled. If it is unavailable, contact
+a maintainer in [MAINTAINERS.md](MAINTAINERS.md) directly for a private reporting
+channel without posting exploit details publicly. No dedicated security email has
+been configured in this repository. Never include private keys, wallet recovery
+material, or reveal secrets.
 
 Provide affected source revision/contracts, preconditions, a minimal reproduction,
 expected versus observed effects, and the affected assets/invariants. Prefer a

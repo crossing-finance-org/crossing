@@ -21,10 +21,11 @@ Disagreement alone is not misconduct.
 
 ## Reporting and moderation
 
-For a conduct concern, ask a repository owner for a private contact without
-posting personal information publicly. The PoC has no dedicated conduct email
-or separate conduct-response team. Do not use public issues for sensitive
-allegations. Security vulnerabilities follow [SECURITY.md](SECURITY.md).
+For a conduct concern, contact a maintainer listed in
+[MAINTAINERS.md](MAINTAINERS.md) privately rather than posting personal
+information publicly. The PoC has no dedicated conduct email or separate
+conduct-response team. Do not use public issues for sensitive allegations.
+Security vulnerabilities follow [SECURITY.md](SECURITY.md).
 
 Repository owners may remove harmful content, warn participants, restrict a
 discussion or suspend access to project spaces. Choose a response proportionate

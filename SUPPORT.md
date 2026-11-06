@@ -27,5 +27,6 @@ an upgrade of existing escrow.
 
 For contribution/review procedure see [CONTRIBUTING.md](CONTRIBUTING.md) and
 [GOVERNANCE.md](GOVERNANCE.md). Support scope, maintenance procedures and service
-retirement are defined in [MAINTENANCE.md](MAINTENANCE.md).
+retirement are defined in [MAINTENANCE.md](MAINTENANCE.md). Current maintainers
+are listed in [MAINTAINERS.md](MAINTAINERS.md).
 

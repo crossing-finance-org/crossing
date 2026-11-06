@@ -1,0 +1,4 @@
+# See ../MAINTAINERS.md for scope/role detail; keep the two files in agreement.
+# This enables GitHub's "require review from Code Owners" branch-protection
+# option, if and when that option is turned on for this repository.
+* @Frihat-dev @seb-vv

@@ -2328,6 +2328,7 @@ auctions or confer custody over users' credits.
 |---|---|
 | [Contributing](CONTRIBUTING.md) | Contributor workflow, regression evidence, compatibility and submission rights |
 | [Governance](GOVERNANCE.md) (§25.1) | Maintainer roles, design decisions, critical review, releases and succession |
+| [Maintainers](MAINTAINERS.md) | Current repository-owner/maintainer identities, mirrored in `.github/CODEOWNERS` |
 | [Code of conduct](CODE_OF_CONDUCT.md) | Participation, confidential reporting, moderation and conflicts |
 | [Security](SECURITY.md) | Vulnerability intake, coordinated disclosure and affected-release handling |
 | [Support](SUPPORT.md) (§26.4) | User help, supported versions and service boundaries |
