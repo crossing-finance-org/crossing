@@ -2,6 +2,19 @@
 
 ## Unreleased — 0.1.0
 
+- Remove the tracked grant-application draft so the published repository
+  reads as an independent engineering project. Restructure `README.md`
+  with a table of contents, a full-project-versus-current-status table,
+  and a repository-structure tree. Add `docs/FUTURE_WORK.md`, consolidating
+  every unresolved item toward the full project with priority, status, and
+  acceptance criteria, cross-referenced to the architecture sections and
+  release gates each comes from. Correct three cosmetic mislabels in the
+  auction state diagram found by re-tracing `advance()`/`finalize()`/
+  `expire()` directly against it: a missing `Funded`-to-`Cancelled` deadline
+  edge, and two cancellation edges that named the wrong triggering stage.
+  Add a dated repository/architecture/security audit report recording what
+  this pass verified against source directly and what remains unverified.
+
 - Commit the governance, licensing, conduct, support, maintenance, and
   architecture-review documents that existed only in the working tree, add
   `MAINTAINERS.md`/`.github/CODEOWNERS` naming current maintainers, and wire
