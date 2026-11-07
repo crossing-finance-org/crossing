@@ -18,6 +18,22 @@ results and actual execution totals can then be published on-chain.
 [Testnet evidence](deployments/TESTNET_TRANSACTIONS.md) ·
 [Documentation](docs/README.md)
 
+## Contents
+
+- [Why an auction for private-market assets?](#why-an-auction-for-private-market-assets)
+- [Sales and buybacks](#sales-and-buybacks)
+- [Open or sealed bidding](#open-or-sealed-bidding)
+- [From funding to settlement](#from-funding-to-settlement)
+- [Compliance through the asset itself](#compliance-through-the-asset-itself)
+- [Public prices with execution context](#public-prices-with-execution-context)
+- [The full project at a glance](#the-full-project-at-a-glance)
+- [The contracts](#the-contracts)
+- [Repository structure](#repository-structure)
+- [Quick start](#quick-start)
+- [Verify the implementation](#verify-the-implementation)
+- [Scope and further review](#scope-and-further-review)
+- [Open source and maintenance](#open-source-and-maintenance)
+
 ## Why an auction for private-market assets?
 
 An asset can have willing buyers and sellers without enough activity to sustain
@@ -139,6 +155,28 @@ can use the published records as inputs to their own pricing policies. They must
 consider execution volume, freshness, market participation, and manipulation
 risk when deciding how much weight to give an observation.
 
+## The full project at a glance
+
+The smart contracts in this repository are the finished, tested, on-chain core
+of a larger intended system. [ARCHITECTURE.md](ARCHITECTURE.md) specifies that
+complete production project; this repository currently implements its
+contracts and a local/Testnet demonstration of them.
+
+| Layer | Role in the full project | Status in this repository |
+|---|---|---|
+| Smart contracts (`contracts/`) | Escrow, bidding, clearing, settlement, compliance checks, price publication | Implemented, tested, deployed to Stellar Testnet |
+| TypeScript SDK (`@crossing/sdk`, `@crossing/contracts`) | Exact amounts/XDR, generated bindings, transaction preparation and signing | Not implemented; independent Python/JavaScript reference models only (`tools/design/`) |
+| Browser dApp | Issuer workspace, bidding, sealed-bid reveal vault, portfolios, recovery | Not implemented |
+| Indexer and public API | Cross-auction search, history, portfolios, reconciliation | Not implemented |
+| Keeper services | Permissionless closing/expiry/publication/retention automation | Not implemented; the public contract methods they would call already exist and work without them |
+| Curated oracle feed | Governed, filtered price feed for lending/collateral use | Not implemented; out of scope for the initial auction product |
+| Governance, licensing, maintenance | Decision authority, distribution terms, component upkeep and continuity | Documented ([GOVERNANCE.md](GOVERNANCE.md), [LICENSING.md](LICENSING.md), [MAINTENANCE.md](MAINTENANCE.md)) |
+
+See [ARCHITECTURE.md §13](ARCHITECTURE.md#13-full-application-and-stellar-integration)
+for the complete application and integration design, and
+[docs/FUTURE_WORK.md](docs/FUTURE_WORK.md) for every open item tracked toward it,
+organized by area with priority and status.
+
 ## The contracts
 
 - **[Auction](contracts/auction/src/lib.rs)** holds escrow, accepts bids, computes
@@ -154,6 +192,33 @@ The [shared library](contracts/common/src/lib.rs) defines wire types, checked
 arithmetic, commitment encoding, and common validation. The
 [architecture](ARCHITECTURE.md) explains how these contracts fit together and
 specifies the wider application and integration design.
+
+## Repository structure
+
+```text
+contracts/
+  common/              # shared types, checked arithmetic, SAC identity, commitment hashing
+  auction/             # escrow, bidding, clearing, delivery, credits, expiry, maintenance
+  auction-factory/     # issuer-authorized deployment and discovery
+  price-registry/      # verified clearing/execution observations
+  oracle-adapter/      # read-only, partial SEP-40 surface over the registry
+tests/
+  design/              # independent Python economic model and generated-book regressions
+  tooling/             # coverage-gate and WASM-artifact packaging regressions
+  vectors/             # canonical commitment and clearing fixtures
+tools/design/          # Python/JS reference models, vector generation, commitment checker
+scripts/               # build/check/demo/coverage/doc-link scripts
+docs/
+  reference/           # contract API reference
+  security/            # design, contract, cryptographic, and architecture reviews
+  operations/          # build, deployment, and recovery runbooks
+  decisions/           # architecture decision records
+  FUTURE_WORK.md       # open items across every area of the project, with priority/status
+deployments/           # Testnet deployment manifest and transaction log
+.github/               # CI workflow, issue/PR templates, CODEOWNERS, Dependabot config
+ARCHITECTURE.md         # complete target-system architecture
+README.md               # this file
+```
 
 ## Quick start
 

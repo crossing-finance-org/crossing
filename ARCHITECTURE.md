@@ -340,9 +340,10 @@ stateDiagram-v2
     Sweep --> Ready: clean complete sweep
     Ready --> Closing: atomic check excludes contributor
     Ready --> Cleared: atomic final checks pass
-    Closing --> Cancelled: minimum fails or deadline
+    Funded --> Cancelled: deadline, never advanced
+    Closing --> Cancelled: no demand or deadline
     Sweep --> Cancelled: close deadline
-    Ready --> Cancelled: close deadline
+    Ready --> Cancelled: minimum fails, global auth failure, or deadline
     Cleared --> Settled: all bids resolved
     Cancelled --> Refunded: all bids credited
 ```
