@@ -13,6 +13,20 @@ buyback budget, and each participant funds its bid when placing it. Completed
 trades exchange those escrowed assets at the common clearing price. Auction
 results and actual execution totals can then be published on-chain.
 
+- **Issuer-authorized.** Only the RWA's current Stellar Asset Contract (SAC)
+  admin can open an auction against it — no separate allowlist to maintain.
+- **Funded bids, no settlement risk.** Every bid locks its collateral on
+  placement; there is nothing to collect from a winner after the fact.
+- **One clearing price.** Every accepted bid in an auction executes at the
+  same price, determined by the bids themselves, not a formula or a quote.
+- **Open or sealed bidding**, issuer's choice, with a disclosed, bounded
+  non-reveal penalty — not unpenalized by default, and not full
+  confidentiality (see [Open or sealed bidding](#open-or-sealed-bidding)).
+- **Compliance through the asset itself.** Authorization is the RWA's own
+  SAC rule, checked at bidding, at closing, and again at delivery.
+- **Public, verifiable prices.** Every clearing result and its actual
+  execution are recorded on-chain for any application to read.
+
 [Run the PoC](docs/POC_DEMO.md) · [Architecture](ARCHITECTURE.md) ·
 [Contract API](docs/reference/CONTRACT_API.md) ·
 [Testnet evidence](deployments/TESTNET_TRANSACTIONS.md) ·
@@ -30,6 +44,7 @@ results and actual execution totals can then be published on-chain.
 - [The contracts](#the-contracts)
 - [Repository structure](#repository-structure)
 - [Quick start](#quick-start)
+- [Deployed contracts (Testnet)](#deployed-contracts-testnet)
 - [Verify the implementation](#verify-the-implementation)
 - [Scope and further review](#scope-and-further-review)
 - [Open source and maintenance](#open-source-and-maintenance)
@@ -67,6 +82,20 @@ at delivery. The resulting clearing price is then a Stellar-native fact other
 contracts and applications can read — see
 [Public prices with execution context](#public-prices-with-execution-context) —
 rather than a number reported off-chain.
+
+```mermaid
+flowchart LR
+    I[Issuer\nRWA SAC admin] -->|authorizes config| F[AuctionFactory]
+    F -->|deploys| A[Auction\nescrow · clearing · claims]
+    B[Bidders] -->|funded bids| A
+    A -->|publishes result| P[PriceRegistry]
+    P -->|SEP-40 read| O[OracleAdapter]
+    O --> D[Other Stellar apps]
+```
+
+Full component and trust-boundary detail, including the roles permissionless
+keepers and the planned SDK/dApp play, is in
+[ARCHITECTURE.md §2](ARCHITECTURE.md#2-components-and-trust-boundaries).
 
 ## Sales and buybacks
 
@@ -267,6 +296,20 @@ It runs locally without a wallet, RPC endpoint, or Testnet funds. The first buil
 needs access to the locked dependencies. Cached environments can use
 `CARGO_NET_OFFLINE=true ./scripts/demo.sh`. See the
 [PoC guide](docs/POC_DEMO.md) for the inputs, assertions, and expected results.
+
+### Deployed contracts (Testnet)
+
+| Contract | Address |
+|---|---|
+| AuctionFactory | `CDCXXGGYI3JPT4QSOEP2ZRNTDEKDCVZI5QWLTXZEB6DQS66LNQUFEO72` |
+| PriceRegistry | `CAUW5ESYR7DUGINV2BEB3VVJKLKRMSM77LM73L6YSTN427ZH5ARPKVDZ` |
+| OracleAdapter | `CDFIP6XT4RBKQHHOZQ6T3OUMM7AWYNST6IEKPVTLB3RMIV2EOU6RRY6M` |
+
+Each `Auction` is deployed per sale or buyback at a factory-predicted address,
+not a single fixed contract; discover one through `AuctionFactory.list` or a
+specific Testnet transaction below. Verify any address against the exact WASM
+hashes in the [deployment manifest](deployments/testnet.json) before trusting
+it — an address alone is not proof of the reviewed release.
 
 ### Testnet evidence
 

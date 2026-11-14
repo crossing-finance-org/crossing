@@ -23,12 +23,12 @@ status is tracked separately below; it does not narrow the target scope.
 
 | Area | Repository baseline | Full implementation |
 |---|---|---|
-| Smart contracts | Four deployable contracts and shared library; local tests and recorded Testnet activity | Reviewed immutable releases, measured capacity, network recovery and resource qualification |
+| Smart contracts | Four deployable contracts and shared library; local tests and recorded Testnet activity | Reviewed immutable releases, a benchmark-gated bid-capacity increase ([§8.3](#83-termination-and-the-capacity-tradeoff)), protocol-managed automatic sealed-bid reveal ([§6.4](#64-planned-protocol-managed-automatic-reveal)), measured capacity, network recovery and resource qualification |
 | dApp and wallet flows | Not implemented | Issuer workspace, investor participation, portfolios, reveal vault and recovery |
 | TypeScript SDK | Independent arithmetic/XDR reference scripts only | Generated bindings, verified deployments, exact amounts and transaction orchestration |
 | Indexer and API | Not implemented | Durable ledger ingestion, public projections, reconciliation, discovery and history |
 | Keeper and retention services | Public contract methods exist; no hosted service | Bounded closing/expiry/publication, fee budgets, TTL monitoring and recovery |
-| Price integration | Raw registry and partial read-only SEP-40 adapter | Clear execution/freshness semantics; curated feed only as a separate later extension |
+| Price integration | Raw registry and partial read-only SEP-40 adapter | Bounded asset enumeration and historical price lookup ([§11.4](#114-planned-priceregistry-v2--bounded-enumeration-and-historical-lookup)), the complete SEP-40 surface ([§11.5](#115-planned-oracleadapter-v2--the-complete-sep-40-surface)); a curated feed remains a separate later extension |
 
 The checked-in [deployment manifest](deployments/testnet.json) and
 [transaction log](deployments/TESTNET_TRANSACTIONS.md) record Testnet evidence.
