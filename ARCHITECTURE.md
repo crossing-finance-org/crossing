@@ -49,6 +49,41 @@ as such and do not imply that application packages already exist.
 | Full-system acceptance and reproducible checks | [23](#23-full-system-acceptance-criteria)–[24](#24-implemented-wire-types-and-reproducible-checks) |
 | Open-source governance, licensing and maintenance | [25](#25-open-source-governance-and-distribution)–[26](#26-maintenance-and-project-continuity) |
 
+### The full architecture at a glance
+
+```mermaid
+flowchart TB
+    subgraph Contracts["On-chain contracts — implemented (§1–§12)"]
+        AF["AuctionFactory"] -->|"deploys"| AU["Auction\n(escrow · clearing · claims)"]
+        AU -->|"record_clearing /\nrecord_settlement"| PR["PriceRegistry"]
+        PR -->|"SEP-40 read"| OA["OracleAdapter"]
+    end
+    subgraph Client["Client layer — planned (§13.5, §13.10–13.12)"]
+        SDK["TypeScript SDK"] --> CLI["Reference CLI"]
+        SDK --> DAPP["Browser dApp +\nwallet + sealed-bid vault"]
+    end
+    subgraph Services["Operating services — planned (§13.14–13.18)"]
+        KEEP["Keeper"]
+        IDX["Indexer + public API"]
+    end
+    ISSUER["Issuer\n(RWA SAC admin)"] -->|"authorizes config"| SDK
+    BIDDER["Bidders"] -->|"funded bids"| DAPP
+    SDK --> AU
+    KEEP -->|"advance / finalize / expire"| AU
+    IDX -->|"ledger events"| AU
+    IDX -->|"observations"| PR
+    OA --> CONSUMER["Other Stellar\napplications"]
+    IDX --> CONSUMER
+```
+
+Everything inside **Contracts** exists today, is tested, and is deployed to
+Stellar Testnet — this is what §1–§12 specify exactly. Everything inside
+**Client layer** and **Operating services** is the target design §13
+specifies; none of it is implemented yet (the repository-baseline table
+above tracks exactly which). The contracts work correctly without either —
+every call the SDK, dApp, or services would make is already a permissionless
+or owner-authorized method a caller can invoke directly today.
+
 ## 1. Product, scope, and decisions
 
 Crossing runs issuer-authorized, fully funded, uniform-price auctions for RWAs on
@@ -324,6 +359,37 @@ An address argument or transaction source is not authentication. Require actual
 spenders' authorization for the exact invocation and necessary SAC subcalls.
 Permissionless functions cannot replace terms or select a refund recipient.
 
+### 4.4 A complete lifecycle, by actor
+
+The table above lists every entry point; this shows who calls them, in order,
+for one Sale auction that clears. §5 below gives the same lifecycle from the
+contract's own state-machine perspective instead of an actor's.
+
+```mermaid
+sequenceDiagram
+    actor Issuer
+    actor Bidder
+    actor Keeper as Any caller (keeper or self-service)
+    participant Auction
+    participant Registry as PriceRegistry
+    Issuer->>Auction: create (via AuctionFactory), then fund()
+    Bidder->>Auction: place_bid / commit_bid (+ reveal_bid if sealed)
+    Keeper->>Auction: advance(work_limit) — repeat until Ready
+    Keeper->>Auction: finalize() — Cleared, or Excluded (restart advance)
+    Keeper->>Registry: record_clearing(auction)
+    Bidder->>Auction: claim_bid(id) — delivery or refund credit
+    Issuer->>Auction: withdraw(issuer, asset, proceeds)
+    Bidder->>Auction: withdraw(bidder, asset, refund)
+    Keeper->>Registry: record_settlement(auction)
+```
+
+"Any caller" is deliberate: every step after `fund()` is permissionless —
+the diagram shows the common case of one operator doing it for convenience,
+not a required role. A cancelled auction (no demand, minimum unmet, or an
+unfinished close past its deadline) skips `finalize`/`claim_bid`'s delivery
+branch and resolves every bid as a full-or-penalized refund instead; §9.1–9.3
+cover that path in detail.
+
 ## 5. State machine and timing
 
 ```mermaid
@@ -455,6 +521,22 @@ offline, unavailable, or simply forgets during the reveal window — today that
 bid is `NonReveal`, subject to whatever penalty the issuer configured (§6.3).
 A planned extension removes that dependency on the bidder's presence without
 changing who can learn a secret before it should be learned.
+
+```mermaid
+sequenceDiagram
+    actor Bidder
+    participant Auction
+    participant drand as drand League of Entropy
+    participant Service as Any reveal-service operator
+    Bidder->>Bidder: encrypt (price, quantity, salt) for a future round
+    Bidder->>Auction: commit_bid(nonce, hash-bound-to-round, max_locked)
+    Note over drand: Round cannot be decrypted before it is signed
+    drand->>drand: signs the targeted round (public event)
+    Service->>drand: observe published round signature
+    Service->>Service: decrypt ciphertext locally
+    Service->>Auction: reveal_bid(id, price, quantity, salt) — permissionless
+    Auction->>Auction: verify against stored commitment hash, as today
+```
 
 The mechanism is time-lock encryption over the [drand League of Entropy
 network](https://drand.love/): at commit time, the bidder encrypts
@@ -628,6 +710,22 @@ accumulators. Never reuse a prefix built from a prior active set. Chunk sizes
 and caller identity cannot change price, allocation, or reserve totals.
 
 ## 8. Three lines of compliance and closing termination
+
+```mermaid
+flowchart LR
+    B1["1. Placement\nboth SAC checks\nbefore escrow"] --> B2["2. Closing\nresumable sweep +\natomic final check"]
+    B2 --> B3["3. Claim\nchecked again\nbefore delivery"]
+    B1 -.->|"fails"| X1["Rejected:\nno bid placed"]
+    B2 -.->|"a contributor fails"| X2["Excluded, refunded,\nclearing restarts (§8.2)"]
+    B3 -.->|"fails"| X3["Refund credit,\nno delivery (§9.2)"]
+```
+
+Each line is a separate, independent check against the token's own SAC —
+not a cached result from an earlier line. Passing line 1 does not exempt a
+bid from line 2; passing line 2 does not exempt it from line 3. This is why
+a bidder who is authorized at bidding and still authorized at closing can
+still fail line 3 if revoked in between, and still receives a correct
+original-asset refund rather than a stuck or misdelivered balance.
 
 ### 8.1 Placement and preliminary sweep
 
@@ -938,6 +1036,23 @@ bounded index the current registry does not have. A planned new registry
 version adds exactly two methods, both registry-native — not part of
 SEP-40, and therefore free to use an explicit continuation cursor rather
 than being constrained to a fixed-arity return type:
+
+```mermaid
+flowchart LR
+    AU["Auction"] -->|"record_clearing /\nrecord_settlement\n(unchanged)"| R0["PriceRegistry v1\nlatest · history · count"]
+    AU -->|"same calls, v2 registry"| R2["PriceRegistry v2\n+ assets_for_base\n+ price_at (cursor OK)"]
+    R0 -->|"today's partial\nSEP-40 surface"| O0["OracleAdapter v1\nbase · decimals ·\nresolution · lastprice"]
+    R2 -->|"internally bounded,\nno cursor exposed"| O2["OracleAdapter v2\n+ assets · price · prices"]
+    O0 --> C1["SEP-40 consumer\n(current price only)"]
+    O2 --> C2["SEP-40 consumer\n(+ enumeration, history)"]
+    style R0 stroke-dasharray: 5 5
+    style O0 stroke-dasharray: 5 5
+```
+
+Dashed boxes are the deployed `0.1.0` contracts, unaffected and still
+serving existing consumers; solid boxes are the planned v2 contracts this
+section and §11.5 specify. A consumer switches to v2 by pointing at the new
+addresses — it is never a forced migration of the v1 deployment.
 
 - `assets_for_base(base, start, limit) -> Vec<Address>` pages a new
   per-base index of every RWA ever priced against it, populated the same
@@ -2610,6 +2725,39 @@ positions. This section defines the operating policy;
 [operations](docs/operations/README.md) defines build/deployment/recovery
 procedures. These are required production capabilities, with implementation
 status tracked separately from the target design.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Reviewed: build, review, deploy (§25.3)
+    Reviewed --> Supported: creation enabled
+    Supported --> Deprecated: new creation disabled (§26.1)
+    Deprecated --> Retired: operations stopped or handed over (§26.5)
+    Retired --> [*]
+    note right of Supported
+        New auctions can be created.
+        Security response active (§26.4).
+    end note
+    note right of Deprecated
+        No new auctions.
+        Reads, claims, withdrawals,
+        and restoration keep working.
+    end note
+    note right of Retired
+        Durable records preserved.
+        Credits never forfeited.
+        A receiving operator accepts
+        its role explicitly, or exits
+        remain self-service.
+    end note
+```
+
+A release's immutability (§4.1, §22) and this lifecycle are two different
+things: an individual deployed `Auction`/`PriceRegistry`/`OracleAdapter`
+never changes code once deployed, but the *release line* it belongs to
+(which new auctions get created against, which client versions are
+supported) moves through these stages. An auction already funded before its
+release line is deprecated keeps running under its original, unchanged code
+regardless of that release's own lifecycle stage.
 
 ### 26.1 Component ownership and change policy
 
