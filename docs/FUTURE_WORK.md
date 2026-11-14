@@ -241,9 +241,13 @@ logic, cryptographic, and this architecture/documentation pass) is an
 internal engineering review. [DESIGN_AUDIT.md gate G-12](security/DESIGN_AUDIT.md#5-open-implementation-and-deployment-gates)
 and [GOVERNANCE.md](../GOVERNANCE.md) both require independent external audit
 and remediation before valuable or Mainnet inventory is placed at risk.
-*Recommended approach:* commission an external audit against a tagged
+[ARCHITECTURE.md §14.1](../ARCHITECTURE.md#141-stride-view-of-the-existing-trust-boundaries)
+categorizes already-documented controls under STRIDE as a summary; it is not
+the independent threat-modeling workshop against the final release artifact
+this item still requires. *Recommended approach:* commission an external
+audit, including a STRIDE-structured review session, against a tagged
 release once contract release qualification (§2 above) is otherwise complete;
-budget time for remediation before any Mainnet deployment. *Dependencies:*
+reserve engineering time for remediation before any Mainnet deployment. *Dependencies:*
 FW-201, FW-202. *Acceptance criteria:* gate G-12; findings resolved per the
 release policy in [ARCHITECTURE.md §25.1](../ARCHITECTURE.md#251-project-policies-and-responsibility).
 

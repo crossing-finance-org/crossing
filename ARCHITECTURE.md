@@ -1245,6 +1245,18 @@ Generate bindings from exact released WASM specifications. CI detects ABI drift
 and requires a reviewed compatibility change. Preserve tagged optional-record
 encodings, all 22 Config fields and canonical ScVal XDR. Rust field declaration
 order, a JSON object or concatenated integers are not encoding substitutes.
+Once §11.4/§11.5 ship, the `registry` module's pair-history functions gain
+client-side support for `price_at`'s continuation-cursor protocol, following
+the same cursor until it finds a match or exhausts the pair's history.
+
+A reference command-line tool over the same SDK core exercises the complete
+auction lifecycle (create, fund, bid/reveal, close, claim, withdraw) without
+a browser, for scripted operation and for integration testing before any
+dApp exists. Before a durable indexer (§13.14) is built, a minimal read-only
+HTTP endpoint derived directly from live contract getters — one auction's
+config/state/accounting/bids, no database, no ingestion — gives the CLI and
+early integrators a live read path; the indexer later extends this endpoint
+rather than duplicating it.
 
 Amounts and prices are `bigint`; JSON uses canonical decimal integer strings.
 Ledger/bid IDs use checked u32 values; discovery/history indexes use bigint or
@@ -1918,6 +1930,23 @@ scoped extensions, not implicit initial-release capabilities.
 | INV-14 | Observation provenance/pair/order/status correct | Forgery, delayed, duplicate, stale publication |
 | INV-15 | Deficit detected before an outward transfer | Genuine SAC clawback and preflight tests |
 
+### 14.1 STRIDE view of the existing trust boundaries
+
+This categorizes controls already specified elsewhere in this document —
+§2's actor/boundary table and the invariants above — under STRIDE, as a
+cross-cutting summary rather than new analysis. It is not a substitute for
+an independent threat-modeling workshop against the final release artifact,
+which remains separate release-qualification work.
+
+| STRIDE category | Addressed by | Residual risk, stated plainly |
+|---|---|---|
+| Spoofing | Genuine-SAC executable verification (§2), factory/template/config-hash provenance pinning (§4.1, §11.1), real Soroban authorization (INV-07) | A related or Sybil account can still participate as itself; provenance proves identity, not independence (§22) |
+| Tampering | Domain-bound commitment hashing (INV-12, §6.2), checked wide arithmetic (§3.1), canonical XDR with no re-encoding ambiguity | None identified within the reviewed arithmetic/encoding paths; future ABI changes require the same vector discipline |
+| Repudiation | Persistent on-chain state and events as the authoritative record (§10); any party can independently verify a transaction hash | Off-chain application logs are not authoritative; reconciliation must read chain state, never trust a cached log (§13.16) |
+| Information disclosure | Sealed bids hide price/quantity until reveal (§6.2) | Explicitly **not** full confidentiality: bidder identity, deposit size, timing, and count remain public; this is disclosed, not closed |
+| Denial of service | Bounded, permissionless `advance`/sweep continuation (§7.4, §8.3); deadline-based cancellation/expiry as an unconditional backstop (§5) | A worst-case book still costs real fees to finish closing; someone must be willing to pay them (§21) |
+| Elevation of privilege | No privileged rescue/upgrade entrypoint; immutable contracts (§4.1, §22); withdrawal pays only the credit's own owner (INV-09/INV-10) | A keeper or indexer operator has no path to redirect funds; this also means no privileged party can fix a deployed defect (§22) |
+
 The [Python model](tools/design/auction_model.py), independent
 [TypeScript-compatible BigInt reference](tools/design/reference.mjs), and
 [design tests](tests/design/test_auction_model.py) validate numerical rules and a
@@ -2427,9 +2456,18 @@ Run all four auction combinations through real wallet signing on Testnet:
 issuer onboarding and escrow authorization, creation/funding, bids/reveal,
 closing with a restart, raw publication, partial/revoked delivery, expiry, credit
 withdrawals and final execution publication. Include an oversubscribed Sale,
-sparse Buyback, minimum-fill cancellation, non-reveal penalty and an old-release
-credit restored after service migration. Reconcile both SAC balances and all
-liability buckets at each terminal outcome.
+sparse Buyback, minimum-fill cancellation, non-reveal penalty, an invalid or
+deliberately unrevealed sealed bid, and an old-release credit restored after
+service migration. Test authorization revocation separately at each of the
+four lifecycle points it can occur — before bidding (admission rejects it),
+before clearing finishes (the preliminary sweep excludes it, §8.1), during
+closing's atomic check (the finalizer excludes it and restarts, §8.2), and
+after clearing but before delivery (the claim resolves to a full refund,
+§9.2) — since each path has a different mechanism and a different test is
+required to exercise it. Include a wallet-disconnect or failed-submission
+case and confirm the application recovers without a duplicate economic
+action (§13.6). Reconcile both SAC balances and all liability buckets at
+each terminal outcome.
 
 Launch requires reproducible reviewed artifacts, independent security findings
 resolved to the release policy, a verified manifest/network/asset catalog,
