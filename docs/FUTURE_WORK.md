@@ -53,6 +53,8 @@ by at least one consumer before that consumer accepts it as a trusted release.
 | FW-202 | Target-network archival restoration submission (gate G-06) | High | Planned | All contracts |
 | FW-203 | Broader classic-account/custom-account signer matrix (gate G-02) | Medium | Planned | Factory, Auction |
 | FW-204 | Curated, governed oracle feed (gate G-10) | Medium | Research | New `contracts/oracle-feed/` |
+| FW-205 | PriceRegistry v2: bounded asset enumeration and historical lookup | Medium | Planned | New `PriceRegistry` release |
+| FW-206 | OracleAdapter v2: complete SEP-40 surface | Medium | Planned | New `OracleAdapter` release (depends on FW-205) |
 
 **FW-201.** *Description:* local resource measurements (CPU, memory, footprint,
 bytes) in [CONTRACT_REVIEW.md](security/CONTRACT_REVIEW.md#resource-measurement)
@@ -90,6 +92,28 @@ governance model, and whether remaining SEP-40 methods (`assets`, `price`,
 `prices`) are in scope. *Dependencies:* none; independent of the auction
 product. *Acceptance criteria:* gate G-10.
 
+**FW-205.** *Description:* [ARCHITECTURE.md §11.4](../ARCHITECTURE.md#114-planned-priceregistry-v2--bounded-enumeration-and-historical-lookup)
+specifies two new registry-native, bounded-pagination methods —
+`assets_for_base` and `price_at` — closing the exact gap §11.3 already names
+(no asset enumeration, no point-in-time lookup). *Recommended approach:*
+implement both as a new registry version deployed alongside the existing
+one; reuse the existing `common::ids` bounded-pagination helper and
+`History(rwa,quote,sequence)` storage rather than a new data model.
+*Dependencies:* none. *Acceptance criteria:* both methods pass the
+boundary/mid-range/after-latest/exhausted-window acceptance cases §11.4
+defines, with zero already-published observation altered.
+
+**FW-206.** *Description:* [ARCHITECTURE.md §11.5](../ARCHITECTURE.md#115-planned-oracleadapter-v2--the-complete-sep-40-surface)
+specifies the three SEP-40 methods §11.3 lists as absent — `assets`,
+`price`, `prices` — implemented over FW-205's new registry methods while
+preserving exact standard signatures (no cursor exposed through a standard
+method). *Recommended approach:* implement after FW-205 ships; validate
+against an independent, generic SEP-40 consumer, not only Crossing's own
+tests. *Dependencies:* FW-205. *Acceptance criteria:* an independent SEP-40
+consumer successfully calls all three methods against the deployed adapter,
+and the bounded-window `None` behavior (rather than a cursor) is confirmed
+for an out-of-window lookup.
+
 ## 3. Clearing algorithm
 
 | ID | Title | Priority | Status | Component |
@@ -124,18 +148,23 @@ release; never a change to the deployed `0.1.0` template.
 | FW-401 | Automatic/threshold reveal service | Low | Research | New service, Auction (new release) |
 | FW-402 | SDK-side encrypted reveal-recovery vault | Medium | Planned | `sdk/core`, `dapp` |
 
-**FW-401.** *Description:* the implemented commit-reveal requires the
-bidder's own authorized `reveal_bid` call; Soroban cannot recover bid details
-from a hash on its own. A design direction for automatic reveal (encrypted
-payload plus a threshold-decryption service) has been discussed but not
-specified. *Recommended approach:* this is a research item, not a scoped
-task — it needs a selected cryptographic scheme, an operator-threshold model,
-payload-availability guarantees, and a ledger-based release policy before it
-can be scoped; it would also require a new immutable auction release, since
-the current contract only allows the bidder's own authorized reveal. Existing
-deployed auctions keep their current authorization rule unconditionally.
-*Dependencies:* none. *Acceptance criteria:* a recorded design decision
-(see [docs/decisions/](decisions/)) before any implementation begins.
+**FW-401.** *Description:* [ARCHITECTURE.md §6.4](../ARCHITECTURE.md#64-planned-protocol-managed-automatic-reveal)
+specifies the selected mechanism: drand time-lock encryption, a permissionless
+`reveal_bid` (removing `b.owner.require_auth()`, safe because the commitment
+hash is the real authenticator), and a new 23rd commitment field binding the
+targeted drand round. This is no longer an open research question — the
+cryptographic scheme, the authorization relaxation, and the ABI change are
+all specified; what remains is implementation. *Recommended approach:*
+implement the new commitment version and relaxed `reveal_bid` as a new
+auction-template release; build the reference open-source reveal-service
+operator as a `services/` component any party can run competitively.
+*Dependencies:* none for the contract change; the reference reveal service
+depends on FW-101 (`services/`). *Acceptance criteria:* a sealed bid
+committed with a target drand round is automatically revealed by an
+independent reveal-service instance within one ledger of that round
+publishing, with no bidder-signed reveal transaction; a bid whose ciphertext
+is never decrypted by anyone still resolves correctly through the existing
+non-reveal penalty path (§6.3) unchanged.
 
 **FW-402.** *Description:* [ARCHITECTURE.md §13.12](../ARCHITECTURE.md#1312-investor-participation-and-reveal-recovery)
 specifies a fixed Argon2id/AES-256-GCM encrypted recovery-envelope profile for
@@ -374,7 +403,9 @@ future decision record in [docs/decisions/](decisions/) would set them.
 | Architecture section | Future-work items |
 |---|---|
 | [§1.1–1.2 Scope and decisions](../ARCHITECTURE.md#1-product-scope-and-decisions) | FW-302, FW-1501–FW-1504 |
-| [§11.3 OracleAdapter](../ARCHITECTURE.md#113-oracleadapter-a-partial-raw-sep-40-read-surface) | FW-204 |
+| [§6.4 Planned automatic reveal](../ARCHITECTURE.md#64-planned-protocol-managed-automatic-reveal) | FW-401 |
+| [§8.3 Termination and the capacity tradeoff](../ARCHITECTURE.md#83-termination-and-the-capacity-tradeoff) | FW-302 |
+| [§11.3–11.5 OracleAdapter and PriceRegistry v2](../ARCHITECTURE.md#113-oracleadapter-a-partial-raw-sep-40-read-surface) | FW-204, FW-205, FW-206 |
 | [§13 Full application and Stellar integration](../ARCHITECTURE.md#13-full-application-and-stellar-integration) | FW-101, FW-401, FW-402, FW-701, FW-702, FW-1001–FW-1004 |
 | [§15.1 Target repository additions](../ARCHITECTURE.md#151-target-repository-additions) | FW-101 |
 | [§22 Adversarial economics and release policy](../ARCHITECTURE.md#22-adversarial-economics-and-release-policy) | FW-901 |

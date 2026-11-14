@@ -51,6 +51,23 @@ The resulting observation also makes an otherwise infrequent trade visible to
 other applications. It records what that auction cleared at, together with how
 much actually traded.
 
+### Why this matters for Stellar
+
+Stellar already has issuers minting real-world assets as Stellar Asset
+Contracts (SACs) with transfer restrictions enforced on-chain — but minting an
+asset is not the same as giving it a market. Crossing does not wrap, bridge,
+or substitute for that SAC; it reads and enforces the issuer's existing
+authorization rules directly, and settles in a Stellar-issued settlement
+asset through genuine SAC transfers. An issuer with a tokenized RWA already
+on Stellar can open an auction against the token it already controls, with no
+separate allowlist to maintain and no custodial intermediary holding
+participants' funds: each bid is funded by a transfer into the auction's own
+escrow, checked against the SAC's own rules at bidding, at closing, and again
+at delivery. The resulting clearing price is then a Stellar-native fact other
+contracts and applications can read — see
+[Public prices with execution context](#public-prices-with-execution-context) —
+rather than a number reported off-chain.
+
 ## Sales and buybacks
 
 In a **sale**, the issuer escrows a fixed quantity of RWA tokens. Buyers submit
@@ -165,6 +182,9 @@ contracts and a local/Testnet demonstration of them.
 | Layer | Role in the full project | Status in this repository |
 |---|---|---|
 | Smart contracts (`contracts/`) | Escrow, bidding, clearing, settlement, compliance checks, price publication | Implemented, tested, deployed to Stellar Testnet |
+| Bounded price-history and full SEP-40 ([§11.4](ARCHITECTURE.md#114-planned-priceregistry-v2--bounded-enumeration-and-historical-lookup)–[11.5](ARCHITECTURE.md#115-planned-oracleadapter-v2--the-complete-sep-40-surface)) | Asset enumeration, point-in-time price lookup, the remaining `assets`/`price`/`prices` methods | Not implemented; current `OracleAdapter` is a documented partial surface |
+| Reviewed higher bid-capacity release ([§8.3](ARCHITECTURE.md#83-termination-and-the-capacity-tradeoff)) | Raise the 16-bid cap by whatever a real target-network measurement supports, in one atomic transaction | Not implemented; current cap is the benchmarked, reviewed maximum for one atomic transaction |
+| Protocol-managed automatic reveal ([§6.4](ARCHITECTURE.md#64-planned-protocol-managed-automatic-reveal)) | drand time-lock encryption and a permissionless, open-source reveal service, so a sealed bid does not depend on its bidder returning | Not implemented; current sealed bids require the bidder's own signed `reveal_bid` |
 | TypeScript SDK (`@crossing/sdk`, `@crossing/contracts`) | Exact amounts/XDR, generated bindings, transaction preparation and signing | Not implemented; independent Python/JavaScript reference models only (`tools/design/`) |
 | Browser dApp | Issuer workspace, bidding, sealed-bid reveal vault, portfolios, recovery | Not implemented |
 | Indexer and public API | Cross-auction search, history, portfolios, reconciliation | Not implemented |
@@ -257,9 +277,33 @@ hashes, source provenance, and build inputs. The
 references**, covering deployment, funded auctions, reveals, compliance changes,
 delivery, deadline recovery, withdrawals, and registry publication.
 
+Two entries in that log are worth reading directly:
+
+- [Auction D](deployments/TESTNET_TRANSACTIONS.md#7-auction-d--buyback-open-mode-the-other-auction-mode-and-direction) —
+  a buyback funded with a 20 CUSD budget, where two holders asking 1.0 and 2.0
+  CUSD per token both clear at a single price of 2.0 (10 CRWA for 20 CUSD),
+  while a third holder asking 3.0 is left unallocated and refunded in full:
+  the clearing-price mechanism, on real Testnet transactions, not a
+  simulation ([clearing](https://stellar.expert/explorer/testnet/tx/c39dffa8b233a23967f066612be401c18dad005fd281291f2ecc767259cafc89),
+  [delivery](https://stellar.expert/explorer/testnet/tx/0f76e432f0d9c1858e5f6f68dfb4408fb8d919a5529246f3de71ebfe127cf004)).
+- [Auction E](deployments/TESTNET_TRANSACTIONS.md#8-auction-e--open-sale-with-a-live-authorization-revocation-mid-auction) —
+  a bidder's SAC authorization is revoked *after* bidding closes but *before*
+  clearing finishes, forcing the finalizer to detect it live, exclude that
+  bid, and restart clearing without it: the compliance exclusion-and-restart
+  path, exercised on-chain rather than only in the test suite.
+
 These public-network records complement the reproducible local demonstration.
-The repository contains the contract code, test fixtures, demo scenarios, and
-technical review records needed to inspect the PoC.
+For the rest of the evidence — what is actually tested, how, and what it does
+and does not establish — the most useful starting points are
+[docs/TESTING.md](docs/TESTING.md) (suite layers, native coverage, and the
+boundary between model, compiled-WASM, and native-measurement evidence),
+[docs/security/FINDINGS_AND_FIXES.md](docs/security/FINDINGS_AND_FIXES.md)
+(every finding raised across six review passes, in plain language, with its
+fix), and [docs/security/REPOSITORY_AUDIT.md](docs/security/REPOSITORY_AUDIT.md)
+(the latest pass, including what it verified directly against source rather
+than by citing earlier claims). The repository also contains the contract
+code, test fixtures, demo scenarios, and technical review records needed to
+inspect the PoC directly.
 
 ## Verify the implementation
 

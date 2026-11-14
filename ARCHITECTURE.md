@@ -447,6 +447,73 @@ The 22-field Config includes this value in its canonical hash. Adding the field
 changed the pre-release ABI and commitment fixtures even when its value is zero;
 older 21-field clients/commitments are incompatible and must not be reused.
 
+### 6.4 Planned: protocol-managed automatic reveal
+
+**Not yet implemented.** §6.2 requires the recorded bidder's own signed
+`reveal_bid` call. This is a genuine inconvenience for a sealed bidder who is
+offline, unavailable, or simply forgets during the reveal window — today that
+bid is `NonReveal`, subject to whatever penalty the issuer configured (§6.3).
+A planned extension removes that dependency on the bidder's presence without
+changing who can learn a secret before it should be learned.
+
+The mechanism is time-lock encryption over the [drand League of Entropy
+network](https://drand.love/): at commit time, the bidder encrypts
+`(price, quantity, salt)` under the public key of a specific future drand
+round — chosen so that round is not yet signed until at or after
+`reveal_end_ledger`'s corresponding wall-clock time — and keeps the resulting
+ciphertext (locally, and optionally mirrored to any number of independent,
+open-source "reveal service" operators for redundancy). Nobody, including the
+bidder, can decrypt that ciphertext before the chosen round's signature is
+published, because the time-lock construction's security does not depend on
+any party withholding a key; it depends on drand's threshold network not
+producing that round's signature early. Once the round *is* published — a
+public fact anyone can observe — **any party** can decrypt the ciphertext
+locally and submit the resulting plaintext as an ordinary `reveal_bid` call.
+
+This requires two concrete, scoped changes to the current design, both
+shipping as a new auction-template release rather than a modification of the
+deployed `0.1.0` template:
+
+1. **The commitment preimage binds a drand round.** A new ABI version adds a
+   `drand_round: u64` field to the hashed tuple in §6.2, so a given ciphertext
+   and reveal are bound to one specific round and cannot be replayed against
+   a different one. This is a new 23rd commitment component, following the
+   same pattern §6.3's `nonreveal_penalty_bps` field already established:
+   a new domain-separated commitment version, new golden vectors, and
+   incompatibility with older client payloads.
+2. **`reveal_bid` becomes permissionless.** The planned version removes
+   `b.owner.require_auth()` from `reveal_bid` so that a decrypting third
+   party can submit the call on the bidder's behalf. This is safe under the
+   existing design, not a new trust assumption: the commitment hash check
+   (`Some(hash) != b.commitment`) — not the caller's signature — is what
+   already authenticates a reveal's price, quantity, and salt against the
+   funds locked at commit time, exactly as `claim_bid`, `expire_bid`, and
+   every other permissionless entry point already lets any fee-paying
+   address execute a predetermined, contract-validated effect. A relaxed
+   `reveal_bid` cannot accept a value that does not hash to the stored
+   commitment, cannot redirect funds, and cannot run before the reveal
+   window opens.
+
+An open-source reveal-service implementation is a convenience that any
+address can run competitively, not a dependency: the original bidder (or
+anyone else who separately obtains the plaintext) can always submit the same
+permissionless `reveal_bid` call directly, including before the automatic
+service acts, including if every instance of the service is offline.
+Crossing itself holds no decryption key and is not a required operator.
+
+What this does **not** change: the non-reveal penalty policy (§6.3) still
+applies to a bid that is never revealed by anyone — a lost ciphertext, a
+drand round the bidder targeted incorrectly, or a bidder who simply chooses
+not to encrypt anything and relies on manual reveal, all behave exactly as
+today. What this does not eliminate: drand's own liveness and cryptographic
+assumptions are an external dependency, no different in kind from relying on
+Stellar's own network liveness; a `reveal_end_ledger` schedule must still
+leave enough margin for the targeted round to actually publish before the
+window closes, which the issuer configures explicitly rather than the
+protocol inferring it. This extension is tracked in
+[docs/FUTURE_WORK.md](docs/FUTURE_WORK.md); it is not implemented in the
+current `0.1.0` contracts, and no deployed auction depends on it.
+
 ## 7. Clearing mathematics
 
 Active means open/revealed and not permanently excluded. Let `T[p]` be total
@@ -618,6 +685,30 @@ an asynchronous final check and claim the same guarantee. Network limits are
 configurable; [Stellar resource guidance](https://developers.stellar.org/docs/build/guides/storage/storage-strategies)
 requires checking the target network. Resource sizing is an open implementation
 gate, not evidence already obtained by this design review.
+
+**Planned: a benchmark-gated capacity increase, not a batched one.** §8.2's
+atomic check exists specifically because splitting it across transactions
+reopens the exact race it was built to close: an address cleared on an
+earlier page could be revoked before a later one, yet still set or share the
+clearing price (finding D-04). Raising `MAX_BIDS` while preserving that
+same one-transaction guarantee is therefore bounded by how many contributors'
+authorization checks actually fit in one atomic call on the real target
+network — not by an arbitrary choice, and not by processing contributors in
+multiple batches, which would weaken the guarantee this section exists to
+provide. A planned release raises the cap by exactly as much as a real
+measurement on the target network supports with margin (`docs/FUTURE_WORK.md`
+tracks this as a benchmark-gated extension), ships as a new, separately
+reviewed auction template, and is reported honestly as unchanged if the
+measurement shows no safe headroom. A design that needed a materially larger
+book than one atomic transaction can check would need a different,
+explicitly reviewed compliance model — accepting a disclosed, weaker
+simultaneity guarantee in exchange for capacity — not a reinterpretation of
+"atomic" to mean "in a bounded number of transactions." §7.4 already states
+the underlying rule — chunk sizes and caller identity cannot change price,
+allocation, or reserve totals — and §13.22 states the release consequence:
+any increase is a reviewed new template/release, and a design that cannot
+fit atomic final checks needs a different, explicitly reviewed compliance
+model, not an assumption that one is feasible.
 
 ## 9. Settlement, refunds, and conservation
 
@@ -837,6 +928,69 @@ actual volume/execution fraction, maximum source age, an independently reviewed
 manipulation policy, and (if needed) the remaining SEP-40 methods — remains
 future work, and should not be inferred from this adapter's existence. No oracle
 governance controls auction escrow either way.
+
+### 11.4 Planned: PriceRegistry v2 — bounded enumeration and historical lookup
+
+**Not yet implemented.** §11.3 already names the exact gap this closes:
+enumerating every RWA priced against a base, and looking up an observation
+by timestamp rather than only `latest()`, both need a new, separately
+bounded index the current registry does not have. A planned new registry
+version adds exactly two methods, both registry-native — not part of
+SEP-40, and therefore free to use an explicit continuation cursor rather
+than being constrained to a fixed-arity return type:
+
+- `assets_for_base(base, start, limit) -> Vec<Address>` pages a new
+  per-base index of every RWA ever priced against it, populated the same
+  way `Count`/`Latest` already are — on `record_clearing` — and read the
+  same bounded way `history()` already is, via `common::ids`.
+- `price_at(rwa, quote, timestamp, start_sequence, limit) -> (Option<Observation>, Option<u64>)`
+  scans at most `limit` of that pair's existing `History(rwa,quote,sequence)`
+  entries starting at `start_sequence`, and returns either the latest
+  observation at or before `timestamp` found in that window, or `None`
+  together with a continuation sequence to re-call from if the window was
+  exhausted without finding one. This is the same bounded-pagination
+  discipline every existing getter already follows; no single call scans
+  unboundedly far into a pair's history.
+
+Both methods are read-only and change no financial state. Like every
+registry method, they trust only what `record_clearing`/`record_settlement`
+already verified; they do not re-derive provenance. This ships as a new,
+separately deployed registry version alongside the existing one — not a
+replacement — so no already-published observation is altered, and existing
+`OracleAdapter` instances pinned to the current registry keep working
+unchanged.
+
+### 11.5 Planned: OracleAdapter v2 — the complete SEP-40 surface
+
+**Not yet implemented.** A planned adapter version adds the three SEP-40
+methods §11.3 lists as absent — `assets()`, `price(asset, timestamp)`,
+`prices(asset, records)` — using §11.4's new registry methods, while
+preserving the exact SEP-40 method signatures: **no adapter method returns
+a continuation cursor.** Where §11.4's registry methods are free to expose
+one (they are not standard-constrained), the adapter resolves that
+internally instead of forwarding it to the caller:
+
+- `prices(asset, records)` returns the most recent `min(records, 32)`
+  observations directly — already bounded by its own argument, exactly as
+  SEP-40 defines it, with no pagination needed.
+- `assets()` returns up to a fixed 32-entry window from
+  `assets_for_base`, documented as possibly non-exhaustive beyond that
+  window: a consumer needing full enumeration calls
+  `PriceRegistry.assets_for_base` directly, which is not SEP-40-constrained.
+- `price(asset, timestamp)` calls `price_at` with one fixed-size internal
+  window and returns `Option<PriceData>` exactly per SEP-40. If that bounded
+  internal scan does not find a match, it returns `None` — never the
+  registry's continuation cursor — documented as a bound on how far back a
+  single standard call reaches; a consumer needing an older lookup calls
+  `PriceRegistry.price_at` directly instead.
+
+This is a real limit on completeness, not a cosmetic one, and this document
+states it as such rather than implying unconditional SEP-40 conformance for
+arbitrarily old history. It ships as a new adapter version pinned to the
+new registry; existing deployed adapters keep working against the existing
+registry, unaffected. Both this and §11.4 are tracked in
+[docs/FUTURE_WORK.md](docs/FUTURE_WORK.md); neither is implemented in the
+current `0.1.0` contracts.
 
 ## 12. TTL, restoration, and resource engineering
 
