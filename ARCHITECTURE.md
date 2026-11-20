@@ -530,7 +530,8 @@ sequenceDiagram
     participant Service as Any reveal-service operator
     Bidder->>Bidder: encrypt (price, quantity, salt) for a future round
     Bidder->>Auction: commit_bid(nonce, hash-bound-to-round, max_locked)
-    Note over drand: Round cannot be decrypted before it is signed
+    Note over Auction: end_ledger — bidding closes
+    Note over drand: Targeted round signs shortly after,\nwith margin before reveal_end_ledger
     drand->>drand: signs the targeted round (public event)
     Service->>drand: observe published round signature
     Service->>Service: decrypt ciphertext locally
@@ -541,16 +542,54 @@ sequenceDiagram
 The mechanism is time-lock encryption over the [drand League of Entropy
 network](https://drand.love/): at commit time, the bidder encrypts
 `(price, quantity, salt)` under the public key of a specific future drand
-round — chosen so that round is not yet signed until at or after
-`reveal_end_ledger`'s corresponding wall-clock time — and keeps the resulting
-ciphertext (locally, and optionally mirrored to any number of independent,
-open-source "reveal service" operators for redundancy). Nobody, including the
-bidder, can decrypt that ciphertext before the chosen round's signature is
-published, because the time-lock construction's security does not depend on
-any party withholding a key; it depends on drand's threshold network not
-producing that round's signature early. Once the round *is* published — a
-public fact anyone can observe — **any party** can decrypt the ciphertext
-locally and submit the resulting plaintext as an ordinary `reveal_bid` call.
+round, and keeps the resulting ciphertext (locally, and optionally mirrored
+to any number of independent, open-source "reveal service" operators for
+redundancy). Nobody, including the bidder, can decrypt that ciphertext
+before the chosen round's signature is published, because the time-lock
+construction's security does not depend on any party withholding a key; it
+depends on drand's threshold network not producing that round's signature
+early. Once the round *is* published — a public fact anyone can observe —
+**any party** can decrypt the ciphertext locally and submit the resulting
+plaintext as an ordinary `reveal_bid` call.
+
+**The targeted round must publish shortly *after* bidding closes, with real
+margin before the reveal deadline — not at or after it.** An earlier
+revision of this section incorrectly targeted a round timed at or after
+`reveal_end_ledger`, which would leave no window at all to decrypt and
+submit before the deadline; that was wrong and is corrected here. The
+ledger/time mapping and the resulting bound are explicit:
+
+1. Convert `end_ledger` to an estimated Unix time `T_end` using the
+   network's observed ledger-close cadence (the same estimation the §13.11
+   dApp already performs to translate ledger bounds for a user). drand
+   rounds publish on a fixed cadence from a public genesis time and period
+   (3 seconds on the League of Entropy's default chain); the targeted round
+   is `target_round = ceil((T_end - drand_genesis_time) / drand_period) + k`
+   for a small margin `k` (at least 1 round), so the round cannot be
+   expected to publish *before* bidding closes — only at or shortly after.
+2. The chosen round's expected publish time must fall **no later than
+   `reveal_end_ledger`'s own estimated time minus a fixed safety margin**
+   (covering decrypt-and-submit latency and ordinary beacon jitter — a
+   reference minimum is 10 minutes or ten drand periods, whichever is
+   larger). A sealed auction's `reveal_end_ledger - end_ledger` window must
+   be wide enough to fit margin `k`'s delay plus this safety margin; this
+   is a config-validation rule the planned release adds, not only
+   operational advice, so a misconfigured schedule is rejected before any
+   bid is placed rather than discovered after the window has already
+   closed.
+3. **Delayed or unavailable beacon.** If the League of Entropy network is
+   delayed past the safety margin, or the targeted round never publishes
+   before `reveal_end_ledger`, no special contract path exists for this —
+   and none is needed. The bid is simply never revealed by anyone in time,
+   resolving exactly as an ordinary non-reveal does today: `NonReveal`,
+   subject to whatever penalty the issuer configured (§6.3), with a full
+   refund if the auction never cleared. This is the same fallback a
+   forgetful manual-reveal bidder already has; automatic reveal is a
+   convenience on top of it, not a new failure mode requiring new recovery
+   logic. Acceptance testing for this extension must include this case
+   explicitly — a targeted round that is deliberately delayed past the
+   reveal deadline in a test — rather than only testing the round
+   publishing on schedule.
 
 This requires two concrete, scoped changes to the current design, both
 shipping as a new auction-template release rather than a modification of the

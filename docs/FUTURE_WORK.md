@@ -159,12 +159,19 @@ implement the new commitment version and relaxed `reveal_bid` as a new
 auction-template release; build the reference open-source reveal-service
 operator as a `services/` component any party can run competitively.
 *Dependencies:* none for the contract change; the reference reveal service
-depends on FW-101 (`services/`). *Acceptance criteria:* a sealed bid
-committed with a target drand round is automatically revealed by an
-independent reveal-service instance within one ledger of that round
-publishing, with no bidder-signed reveal transaction; a bid whose ciphertext
-is never decrypted by anyone still resolves correctly through the existing
-non-reveal penalty path (§6.3) unchanged.
+depends on FW-101 (`services/`). The round/ledger timing rule and its
+config-validation bound are specified in §6.4; an earlier revision of that
+section incorrectly targeted a round at or after `reveal_end_ledger`, which
+left no window to decrypt and submit — corrected to target shortly after
+`end_ledger`, with a fixed safety margin required before `reveal_end_ledger`.
+*Acceptance criteria:* a sealed bid committed with a correctly targeted
+drand round is automatically revealed by an independent reveal-service
+instance with time to spare before `reveal_end_ledger`, with no bidder-
+signed reveal transaction; a config whose window does not fit the required
+margin is rejected at validation, before any bid is placed; a deliberately
+delayed or unavailable targeted round (tested, not only assumed) still
+resolves the bid correctly through the existing non-reveal penalty path
+(§6.3), unchanged, rather than through any new recovery logic.
 
 **FW-402.** *Description:* [ARCHITECTURE.md §13.12](../ARCHITECTURE.md#1312-investor-participation-and-reveal-recovery)
 specifies a fixed Argon2id/AES-256-GCM encrypted recovery-envelope profile for
